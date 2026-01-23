@@ -63,11 +63,11 @@ export default function DashboardPage() {
   const stats = mockStats;
 
   const getStatusBadge = (status: GemType['status']) => {
-    const variants: Record<GemType['status'], 'success' | 'warning' | 'error' | 'default'> = {
-      approved: 'success',
-      pending: 'warning',
-      rejected: 'error',
-      expired: 'default',
+    const variants: Record<GemType['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      approved: 'default',
+      pending: 'secondary',
+      rejected: 'destructive',
+      expired: 'outline',
     };
     return <Badge variant={variants[status]}>{status}</Badge>;
   };
@@ -221,7 +221,7 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-4">
               {gems.map((gem) => {
-                const daysLeft = daysUntilExpiry(gem.current_term_end);
+                const daysLeft = gem.current_term_end ? daysUntilExpiry(gem.current_term_end) : null;
                 const isExpiringSoon = daysLeft !== null && daysLeft <= 30;
 
                 return (
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                         <h3 className="font-semibold">{gem.name}</h3>
                         {getStatusBadge(gem.status)}
                         {gem.tier === 'featured' && (
-                          <Badge variant="warning">Featured</Badge>
+                          <Badge variant="default">Featured</Badge>
                         )}
                       </div>
                       <p className="text-sm text-[var(--foreground-muted)]">

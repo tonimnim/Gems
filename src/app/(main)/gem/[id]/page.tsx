@@ -16,7 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { Button, Badge, StarRating, Avatar, Card, CardContent, Textarea } from '@/components/ui';
+import { Button, Badge, StarRating, Avatar, AvatarImage, AvatarFallback, Card, CardContent, Textarea } from '@/components/ui';
 import { GEM_CATEGORIES, ROUTES } from '@/constants';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -223,7 +223,7 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
 
         {/* Featured badge */}
         {gem.tier === 'featured' && (
-          <Badge variant="warning" className="absolute top-4 left-4">
+          <Badge variant="default" className="absolute top-4 left-4">
             Featured Gem
           </Badge>
         )}
@@ -345,11 +345,10 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
                       className="border-b border-[var(--card-border)] pb-4 last:border-0"
                     >
                       <div className="flex items-start gap-3">
-                        <Avatar
-                          src={rating.user?.avatar_url}
-                          name={rating.user?.full_name}
-                          size="sm"
-                        />
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={rating.user?.avatar_url} alt={rating.user?.full_name || ''} />
+                          <AvatarFallback>{rating.user?.full_name?.charAt(0) || '?'}</AvatarFallback>
+                        </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">

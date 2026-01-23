@@ -238,17 +238,21 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="bg-white rounded-2xl shadow-2xl p-8 animate-pulse">
-        <div className="h-8 bg-gray-200 rounded w-2/3 mx-auto mb-4" />
-        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-8" />
-        <div className="h-12 bg-gray-200 rounded mb-6" />
-        <div className="h-12 bg-gray-200 rounded mb-4" />
-        <div className="h-12 bg-gray-200 rounded mb-4" />
-        <div className="h-12 bg-gray-200 rounded" />
+    <div className="min-h-screen bg-[#092327] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Suspense fallback={
+          <div className="bg-white rounded-2xl shadow-2xl p-8 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-2/3 mx-auto mb-4" />
+            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-8" />
+            <div className="h-12 bg-gray-200 rounded mb-6" />
+            <div className="h-12 bg-gray-200 rounded mb-4" />
+            <div className="h-12 bg-gray-200 rounded mb-4" />
+            <div className="h-12 bg-gray-200 rounded" />
+          </div>
+        }>
+          <LoginForm />
+        </Suspense>
       </div>
-    }>
-      <LoginForm />
-    </Suspense>
+    </div>
   );
 }

@@ -50,29 +50,35 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 bg-[#00AA6C]/10 rounded-full flex items-center justify-center">
-          <Mail className="h-8 w-8 text-[#00AA6C]" />
+      <div className="min-h-screen bg-[#092327] flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-[#00AA6C]/10 rounded-full flex items-center justify-center">
+              <Mail className="h-8 w-8 text-[#00AA6C]" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              Check your email
+            </h1>
+            <p className="text-gray-500 mb-6">
+              We&apos;ve sent you a password reset link. Please check your email to reset your password.
+            </p>
+            <Link
+              href={ROUTES.login}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-[#00AA6C] border-2 border-[#00AA6C] hover:bg-[#00AA6C]/5 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Sign In
+            </Link>
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-          Check your email
-        </h1>
-        <p className="text-gray-500 mb-6">
-          We&apos;ve sent you a password reset link. Please check your email to reset your password.
-        </p>
-        <Link
-          href={ROUTES.login}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-[#00AA6C] border-2 border-[#00AA6C] hover:bg-[#00AA6C]/5 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Sign In
-        </Link>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+    <div className="min-h-screen bg-[#092327] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
       {/* Header */}
       <div className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
@@ -137,6 +143,8 @@ export default function ForgotPasswordPage() {
         <ArrowLeft className="h-4 w-4" />
         Back to sign in
       </Link>
+        </div>
+      </div>
     </div>
   );
 }

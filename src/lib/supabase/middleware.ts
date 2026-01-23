@@ -1,7 +1,46 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+// Mobile device detection
+function isMobileDevice(userAgent: string): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(
+    userAgent
+  );
+}
+
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const userAgent = request.headers.get('user-agent') || '';
+  const isMobile = isMobileDevice(userAgent);
+
+  // Mobile device detection for root path
+  // If mobile user visits "/", redirect to "/m"
+  // If desktop user visits "/m", redirect to "/"
+  if (pathname === '/') {
+    if (isMobile) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/m';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // If desktop user tries to access /m routes, redirect to desktop equivalent
+  if (pathname.startsWith('/m') && !isMobile) {
+    const url = request.nextUrl.clone();
+    // Map mobile routes to desktop equivalents
+    if (pathname === '/m') {
+      url.pathname = '/';
+    } else if (pathname === '/m/explore') {
+      url.pathname = '/explore';
+    } else if (pathname === '/m/search') {
+      url.pathname = '/search';
+    } else if (pathname === '/m/saved') {
+      url.pathname = '/favorites';
+    } else {
+      url.pathname = '/';
+    }
+    return NextResponse.redirect(url);
+  }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

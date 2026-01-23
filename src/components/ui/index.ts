@@ -6,3 +6,4 @@ export * from './avatar';
 export * from './star-rating';
 export * from './select';
 export * from './textarea';
+export * from './radio-group';
