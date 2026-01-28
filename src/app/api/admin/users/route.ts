@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsers, type UserFilters } from '@/lib/api/admin';
+import { requireAdmin } from '@/lib/api/admin-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAdmin();
+    if (!auth.authorized) return auth.response;
+
     const searchParams = request.nextUrl.searchParams;
 
     const page = parseInt(searchParams.get('page') || '1');

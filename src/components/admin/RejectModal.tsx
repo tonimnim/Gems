@@ -19,7 +19,7 @@ const REJECTION_REASONS = [
   { value: 'duplicate_listing', label: 'Duplicate listing' },
   { value: 'insufficient_information', label: 'Insufficient information' },
   { value: 'poor_quality_images', label: 'Poor quality images' },
-  { value: 'incorrect_category', label: 'Incorrect category' },
+  { value: 'business_doesnt_exist', label: "Business doesn't exist" },
   { value: 'other', label: 'Other' },
 ] as const;
 
@@ -109,9 +109,9 @@ export function RejectModal({
           </Button>
           <Button
             type="button"
-            variant="destructive"
             onClick={handleReject}
             disabled={!selectedReason || isLoading}
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             {isLoading ? 'Rejecting...' : 'Reject Gem'}
           </Button>

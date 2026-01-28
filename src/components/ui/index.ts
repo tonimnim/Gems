@@ -7,3 +7,6 @@ export * from './star-rating';
 export * from './select';
 export * from './textarea';
 export * from './radio-group';
+export * from './cloudinary-image';
+export * from './image-uploader';
+export * from './map-picker';

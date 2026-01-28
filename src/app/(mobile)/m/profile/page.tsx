@@ -13,8 +13,7 @@ import {
   ChevronRight,
   Plus,
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/auth-context';
 
 interface MenuItemProps {
   href?: string;
@@ -66,7 +65,7 @@ function MenuItem({ href, icon: Icon, label, description, onClick, variant = 'de
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, signOut } = useAuth();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -76,8 +75,7 @@ export default function ProfilePage() {
   }, [isLoading, isAuthenticated, router]);
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut();
     router.push('/m');
   };
 
@@ -89,13 +87,14 @@ export default function ProfilePage() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return null;
   }
 
-  const userName = user?.user_metadata?.full_name || 'Owner';
-  const userEmail = user?.email || '';
+  const userName = user.full_name || 'User';
+  const userEmail = user.email || '';
   const userInitial = userName.charAt(0).toUpperCase();
+  const userRole = user.role === 'owner' ? 'Owner' : user.role === 'admin' ? 'Admin' : 'Visitor';
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -109,29 +108,39 @@ export default function ProfilePage() {
       {/* User Info */}
       <div className="bg-white px-4 py-5 border-b border-gray-100">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-[#00AA6C] rounded-full flex items-center justify-center">
-            <span className="text-2xl font-bold text-white">{userInitial}</span>
-          </div>
+          {user.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={userName}
+              className="w-16 h-16 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-16 h-16 bg-[#00AA6C] rounded-full flex items-center justify-center">
+              <span className="text-2xl font-bold text-white">{userInitial}</span>
+            </div>
+          )}
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-gray-900">{userName}</h2>
             <p className="text-sm text-gray-500">{userEmail}</p>
             <span className="inline-block mt-1 px-2 py-0.5 bg-[#00AA6C]/10 text-[#00AA6C] text-xs font-medium rounded-full">
-              Owner
+              {userRole}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Quick Action */}
-      <div className="px-4 py-4">
-        <Link
-          href="/gems/new"
-          className="flex items-center justify-center gap-2 w-full py-3 bg-[#00AA6C] text-white font-medium rounded-xl touch-feedback"
-        >
-          <Plus className="h-5 w-5" />
-          List a New Gem
-        </Link>
-      </div>
+      {/* Quick Action - Only show for owners */}
+      {user.role === 'owner' && (
+        <div className="px-4 py-4">
+          <Link
+            href="/gems/new"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-[#00AA6C] text-white font-medium rounded-xl touch-feedback"
+          >
+            <Plus className="h-5 w-5" />
+            List a New Gem
+          </Link>
+        </div>
+      )}
 
       {/* Menu Sections */}
       <div className="bg-white border-t border-b border-gray-100">
@@ -179,7 +188,7 @@ export default function ProfilePage() {
 
       {/* Footer */}
       <div className="px-4 py-6 text-center">
-        <p className="text-xs text-gray-400">Hidden Gems v1.0.0</p>
+        <p className="text-xs text-gray-400">Gems v1.0.0</p>
       </div>
     </div>
   );

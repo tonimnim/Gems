@@ -1,6 +1,6 @@
 import { GemCategory } from '@/types';
 
-export const APP_NAME = 'Hidden Gems';
+export const APP_NAME = 'Gems';
 export const APP_DESCRIPTION = 'Discover amazing hidden gems across Africa';
 
 // Pricing in KES
@@ -86,10 +86,12 @@ export const ROUTES = {
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',
+  completeProfile: '/complete-profile',
   // Owner
   dashboard: '/dashboard',
   newGem: '/gems/new',
   editGem: (id: string) => `/gems/${id}/edit`,
+  gemMenu: (id: string) => `/gems/${id}/menu`,
   payments: '/payments',
   // Admin
   verify: '/verify',

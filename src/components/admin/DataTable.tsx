@@ -55,7 +55,7 @@ export function DataTable<T extends { id: string }>({
 
   if (data.length === 0 && emptyState) {
     return (
-      <div className={cn('mx-auto max-w-7xl', className)}>
+      <div className={cn('mx-auto max-w-6xl', className)}>
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 bg-white py-16">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
             {emptyState.icon || <Inbox className="h-7 w-7 text-gray-400" />}
@@ -73,7 +73,7 @@ export function DataTable<T extends { id: string }>({
   }
 
   return (
-    <div className={cn('mx-auto max-w-7xl space-y-4', className)}>
+    <div className={cn('mx-auto max-w-6xl space-y-4', className)}>
       <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
         <Table>
           <TableHeader>
@@ -237,7 +237,7 @@ interface DataTableSkeletonProps {
 
 export function DataTableSkeleton({ columns, rows }: DataTableSkeletonProps) {
   return (
-    <div className="mx-auto max-w-7xl overflow-hidden rounded-lg border bg-white shadow-sm">
+    <div className="mx-auto max-w-6xl overflow-hidden rounded-lg border bg-white shadow-sm">
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50/50">

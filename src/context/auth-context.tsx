@@ -1,12 +1,14 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@/types';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isAuthenticated: boolean;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -14,102 +16,131 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
+  isAuthenticated: false,
   signOut: async () => {},
   refreshUser: async () => {},
 });
+
+// Instantly create user from auth data (no network request)
+function createUserFromAuth(authUser: SupabaseUser): User {
+  const metadata = authUser.user_metadata || {};
+  return {
+    id: authUser.id,
+    email: authUser.email ?? null,
+    full_name: metadata.full_name || metadata.name || null,
+    avatar_url: metadata.avatar_url || metadata.picture || null,
+    role: metadata.role || 'visitor', // Default, will be updated from DB
+    country: metadata.country || null,
+    created_at: authUser.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Create Supabase client only on client-side
-  const supabase = useMemo(() => {
-    if (typeof window === 'undefined') return null;
+  // Fetch actual role from database (background)
+  const updateUserRole = useCallback(async (userId: string) => {
     try {
-      return createClient();
+      const supabase = createClient();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, country')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        setUser(prev => prev ? { ...prev, role: profile.role, country: profile.country } : null);
+      }
     } catch {
-      console.warn('Supabase client could not be created. Auth features will be disabled.');
-      return null;
+      // Silent fail - user already has default role
     }
   }, []);
 
-  const fetchUser = async (userId: string) => {
-    if (!supabase) return null;
+  const refreshUser = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching user:', error);
-      return null;
-    }
-
-    return data as User;
-  };
-
-  const refreshUser = async () => {
-    if (!supabase) return;
-
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser) {
-      const userData = await fetchUser(authUser.id);
+    if (session?.user) {
+      const userData = createUserFromAuth(session.user);
       setUser(userData);
+      // Update role in background
+      updateUserRole(session.user.id);
+    } else {
+      setUser(null);
     }
-  };
+  }, [updateUserRole]);
+
+  const signOut = useCallback(async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setUser(null);
+  }, []);
 
   useEffect(() => {
-    if (!supabase) {
-      setIsLoading(false);
-      return;
-    }
+    const supabase = createClient();
+    let mounted = true;
 
-    const initAuth = async () => {
-      try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+    // Initialize - instant from session storage
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
 
-        if (authUser) {
-          const userData = await fetchUser(authUser.id);
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
+      if (session?.user) {
+        // Instantly show user from auth metadata
+        const userData = createUserFromAuth(session.user);
+        setUser(userData);
+        setIsLoading(false);
+
+        // Fetch actual role in background
+        updateUserRole(session.user.id);
+      } else {
         setIsLoading(false);
       }
-    };
+    });
 
-    initAuth();
-
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const userData = await fetchUser(session.user.id);
-          setUser(userData);
+      (event, session) => {
+        if (!mounted) return;
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            const userData = createUserFromAuth(session.user);
+            setUser(userData);
+            updateUserRole(session.user.id);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
         }
+
+        setIsLoading(false);
       }
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
-
-  const signOut = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    setUser(null);
-  };
+  }, [updateUserRole]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signOut, refreshUser }}>
+    <AuthContext.Provider value={{
+      user,
+      isLoading,
+      isAuthenticated: !!user,
+      signOut,
+      refreshUser
+    }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};

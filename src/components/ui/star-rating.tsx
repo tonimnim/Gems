@@ -48,15 +48,15 @@ export function StarRating({
       >
         {isHalf ? (
           <StarHalf
-            className={cn(sizeMap[size], 'fill-[var(--star-filled)] text-[var(--star-filled)]')}
+            className={cn(sizeMap[size], 'fill-yellow-400 text-yellow-400')}
           />
         ) : (
           <Star
             className={cn(
               sizeMap[size],
               isFilled
-                ? 'fill-[var(--star-filled)] text-[var(--star-filled)]'
-                : 'fill-[var(--star-empty)] text-[var(--star-empty)]'
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'fill-gray-200 text-gray-200'
             )}
           />
         )}

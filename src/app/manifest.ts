@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Hidden Gems Africa',
-    short_name: 'Hidden Gems',
+    name: 'Gems',
+    short_name: 'Gems',
     description: 'Discover amazing hidden gems across Africa - restaurants, nature spots, cultural sites, and more',
     start_url: '/',
     display: 'standalone',

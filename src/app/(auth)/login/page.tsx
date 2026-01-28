@@ -56,7 +56,7 @@ function LoginForm() {
 
     try {
       const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
@@ -66,8 +66,11 @@ function LoginForm() {
         return;
       }
 
-      router.push(redirect);
-      router.refresh();
+      if (authData.session) {
+        // Small delay to ensure cookies are set, then full page reload
+        await new Promise(resolve => setTimeout(resolve, 100));
+        window.location.href = redirect;
+      }
     } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -106,7 +109,7 @@ function LoginForm() {
           Welcome back
         </h1>
         <p className="text-gray-500 text-sm sm:text-base">
-          Sign in to continue to Hidden Gems
+          Sign in to continue to Gems
         </p>
       </div>
 

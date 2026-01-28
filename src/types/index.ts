@@ -3,11 +3,11 @@ export type UserRole = 'visitor' | 'owner' | 'admin';
 
 export interface User {
   id: string;
-  email: string;
-  full_name: string;
-  avatar_url?: string;
+  email: string | null;
+  full_name: string | null;
+  avatar_url?: string | null;
   role: UserRole;
-  country?: string;
+  country?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,7 +40,8 @@ export interface Gem {
   name: string;
   slug: string;
   description: string;
-  category: GemCategory;
+  category: GemCategory; // Primary category (legacy, kept for backwards compatibility)
+  categories: GemCategory[]; // Up to 3 categories
   country: string;
   city: string;
   address: string;
@@ -107,6 +108,36 @@ export interface Favorite {
   created_at: string;
 }
 
+// Notification types
+export type NotificationType =
+  | 'new_review'           // Owner: someone reviewed their gem
+  | 'gem_approved'         // Owner: gem was approved
+  | 'gem_rejected'         // Owner: gem was rejected
+  | 'payment_success'      // Owner: payment successful
+  | 'payment_failed'       // Owner: payment failed
+  | 'listing_expiring'     // Owner: listing expiring soon
+  | 'gem_saved'            // Owner: someone saved their gem
+  | 'saved_gem_updated'    // Visitor: a saved gem was updated
+  | 'new_gem_pending'      // Admin: new gem needs verification
+  | 'new_payment';         // Admin: new payment received
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: {
+    gem_id?: string;
+    gem_name?: string;
+    payment_id?: string;
+    review_id?: string;
+    rating?: number;
+  };
+  read: boolean;
+  created_at: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   data?: T;
@@ -120,6 +151,23 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
   total_pages: number;
+}
+
+// Menu Item types (for eat_drink gems)
+export interface MenuItem {
+  id: string;
+  gem_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  currency: string;
+  category: string; // e.g., 'Starters', 'Main Course', 'Desserts', 'Drinks'
+  image_url?: string; // Optional image
+  is_available: boolean;
+  is_featured: boolean; // Signature dishes
+  order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // Filter types

@@ -87,7 +87,7 @@ export async function initiatePayment(
         phoneNumber,
         amount,
         accountReference: accountRef,
-        transactionDesc: `Hidden Gems - ${type.replace('_', ' ')}`,
+        transactionDesc: `Gems - ${type.replace('_', ' ')}`,
       });
 
       // Update payment with M-Pesa checkout details
@@ -135,15 +135,22 @@ export async function initiatePayment(
 }
 
 /**
- * Handle successful payment - update gem status
+ * Handle successful payment - update gem term dates
  */
-export async function handlePaymentSuccess(paymentId: string): Promise<void> {
+export async function handlePaymentSuccess(
+  paymentId: string,
+  mpesaData?: {
+    resultCode: number;
+    resultDesc: string;
+    mpesaReceiptNumber?: string;
+  }
+): Promise<void> {
   const supabase = await createClient();
 
   // Get payment details
   const { data: payment, error } = await supabase
     .from('payments')
-    .select('gem_id, term_start, term_end, type')
+    .select('gem_id, user_id, term_start, term_end, type, status')
     .eq('id', paymentId)
     .single();
 
@@ -152,11 +159,26 @@ export async function handlePaymentSuccess(paymentId: string): Promise<void> {
     return;
   }
 
-  // Update gem with new term and status
+  // Don't process if already completed
+  if (payment.status === 'completed') {
+    return;
+  }
+
+  // Update payment status to completed
+  await supabase
+    .from('payments')
+    .update({
+      status: 'completed',
+      result_code: mpesaData?.resultCode,
+      result_description: mpesaData?.resultDesc,
+      provider_reference: mpesaData?.mpesaReceiptNumber,
+    })
+    .eq('id', paymentId);
+
+  // Update gem with new term dates (gem is already approved by admin)
   const updateData: Record<string, unknown> = {
     current_term_start: payment.term_start,
     current_term_end: payment.term_end,
-    status: 'approved', // Auto-approve on payment (or keep pending for manual review)
   };
 
   // If upgrade, change tier
@@ -165,6 +187,44 @@ export async function handlePaymentSuccess(paymentId: string): Promise<void> {
   }
 
   await supabase.from('gems').update(updateData).eq('id', payment.gem_id);
+
+  // Get gem name for notification
+  const { data: gem } = await supabase
+    .from('gems')
+    .select('name')
+    .eq('id', payment.gem_id)
+    .single();
+
+  // Send notification to owner that payment was successful and gem is now live
+  await supabase.from('notifications').insert({
+    user_id: payment.user_id,
+    type: 'payment_success',
+    title: 'Payment Successful!',
+    message: `Your gem "${gem?.name || 'Unknown'}" is now live and visible to the public.`,
+    data: {
+      gem_id: payment.gem_id,
+      gem_name: gem?.name,
+      payment_id: paymentId,
+    },
+  });
+}
+
+/**
+ * Handle failed payment
+ */
+export async function handlePaymentFailure(
+  paymentId: string,
+  reason: string
+): Promise<void> {
+  const supabase = await createClient();
+
+  await supabase
+    .from('payments')
+    .update({
+      status: 'failed',
+      result_description: reason,
+    })
+    .eq('id', paymentId);
 }
 
 /**

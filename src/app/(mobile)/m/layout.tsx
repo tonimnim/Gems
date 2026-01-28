@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, Heart, Compass, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/auth-context';
+
+const MOBILE_BREAKPOINT = 768;
 
 const baseNavItems = [
   { href: '/m', icon: Home, label: 'Home' },
@@ -20,7 +23,30 @@ export default function MobileLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const [isMobile, setIsMobile] = useState(true); // Assume mobile first
+
+  // Fast redirect for desktop users
+  useEffect(() => {
+    const checkDevice = () => {
+      const isDesktop = window.innerWidth >= MOBILE_BREAKPOINT;
+      if (isDesktop) {
+        // Redirect to web view, converting /m/... to /...
+        const webPath = pathname.replace(/^\/m/, '') || '/';
+        router.replace(webPath);
+      } else {
+        setIsMobile(true);
+      }
+    };
+
+    // Check immediately
+    checkDevice();
+
+    // Also listen for resize (for dev tools toggle)
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, [pathname, router]);
 
   // Build nav items - add Profile tab if user is logged in (owner)
   const navItems = isAuthenticated

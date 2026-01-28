@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import {
   validateCallback,
   parseCallback,
   getPaymentByCheckoutRequestId,
-  updatePaymentStatus,
   handlePaymentSuccess,
+  handlePaymentFailure,
 } from '@/lib/payments';
 
 /**
@@ -15,8 +14,6 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-
-    console.log('M-Pesa Callback received:', JSON.stringify(body, null, 2));
 
     // Validate callback structure
     if (!validateCallback(body)) {
@@ -40,39 +37,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine payment status based on result code
-    const isSuccess = callbackData.resultCode === 0;
-
-    // Update payment record
-    await updatePaymentStatus(
-      payment.id,
-      isSuccess ? 'completed' : 'failed',
-      {
-        result_code: callbackData.resultCode,
-        result_description: callbackData.resultDesc,
-        mpesa_receipt_number: callbackData.mpesaReceiptNumber || null,
-        provider_reference: callbackData.mpesaReceiptNumber || null,
-        metadata: {
-          transactionDate: callbackData.transactionDate,
-          phoneNumber: callbackData.phoneNumber,
-          amount: callbackData.amount,
-        },
-      }
-    );
-
-    // If successful, update gem status
-    if (isSuccess) {
-      await handlePaymentSuccess(payment.id);
-      console.log('Payment successful:', {
-        paymentId: payment.id,
-        receipt: callbackData.mpesaReceiptNumber,
-      });
-    } else {
-      console.log('Payment failed:', {
-        paymentId: payment.id,
+    // Handle based on result code
+    if (callbackData.resultCode === 0) {
+      await handlePaymentSuccess(payment.id, {
         resultCode: callbackData.resultCode,
         resultDesc: callbackData.resultDesc,
+        mpesaReceiptNumber: callbackData.mpesaReceiptNumber,
       });
+    } else {
+      await handlePaymentFailure(payment.id, callbackData.resultDesc);
     }
 
     // Always return success to M-Pesa

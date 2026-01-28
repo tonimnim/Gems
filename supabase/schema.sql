@@ -94,6 +94,23 @@ CREATE TABLE public.favorites (
     UNIQUE(user_id, gem_id)
 );
 
+-- Menu Items table (for eat_drink gems only)
+CREATE TABLE public.menu_items (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    gem_id UUID REFERENCES public.gems(id) ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    currency TEXT DEFAULT 'KES' NOT NULL,
+    category TEXT NOT NULL, -- e.g., 'Starters', 'Main Course', 'Desserts', 'Drinks'
+    image_url TEXT, -- Optional image
+    is_available BOOLEAN DEFAULT TRUE NOT NULL,
+    is_featured BOOLEAN DEFAULT FALSE NOT NULL, -- Signature dishes
+    "order" INTEGER DEFAULT 0 NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
 -- Payments table
 CREATE TABLE public.payments (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -128,6 +145,9 @@ CREATE INDEX idx_favorites_user ON public.favorites(user_id);
 CREATE INDEX idx_favorites_gem ON public.favorites(gem_id);
 CREATE INDEX idx_payments_gem ON public.payments(gem_id);
 CREATE INDEX idx_payments_user ON public.payments(user_id);
+CREATE INDEX idx_menu_items_gem ON public.menu_items(gem_id);
+CREATE INDEX idx_menu_items_category ON public.menu_items(category);
+CREATE INDEX idx_menu_items_available ON public.menu_items(is_available);
 
 -- ============================================
 -- FUNCTIONS
@@ -200,6 +220,10 @@ CREATE TRIGGER update_payments_updated_at
     BEFORE UPDATE ON public.payments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+CREATE TRIGGER update_menu_items_updated_at
+    BEFORE UPDATE ON public.menu_items
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 -- Update gem rating stats
 CREATE TRIGGER update_gem_rating_stats_on_insert
     AFTER INSERT ON public.ratings
@@ -228,6 +252,7 @@ ALTER TABLE public.gem_media ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ratings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
 
 -- Users policies
 CREATE POLICY "Users can view all profiles"
@@ -325,6 +350,61 @@ CREATE POLICY "Users can insert their own payments"
 -- Admins can view all payments
 CREATE POLICY "Admins can view all payments"
     ON public.payments FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.users
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Menu Items policies
+CREATE POLICY "Anyone can view menu items"
+    ON public.menu_items FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.gems
+            WHERE id = gem_id AND status = 'approved'
+        )
+    );
+
+CREATE POLICY "Owners can view their gem menu items"
+    ON public.menu_items FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.gems
+            WHERE id = gem_id AND owner_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Owners can insert menu items"
+    ON public.menu_items FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.gems
+            WHERE id = gem_id AND owner_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Owners can update menu items"
+    ON public.menu_items FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.gems
+            WHERE id = gem_id AND owner_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Owners can delete menu items"
+    ON public.menu_items FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.gems
+            WHERE id = gem_id AND owner_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Admins can manage all menu items"
+    ON public.menu_items FOR ALL
     USING (
         EXISTS (
             SELECT 1 FROM public.users

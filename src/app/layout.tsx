@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { AuthProvider } from '@/context/auth-context';
+import { NotificationProvider } from '@/context/notification-context';
+import { LocationProvider } from '@/context/location-context';
 import { APP_NAME, APP_DESCRIPTION } from '@/constants';
 import './globals.css';
 
@@ -73,9 +75,14 @@ export default function RootLayout({
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <AuthProvider>
-          {children}
+          <LocationProvider>
+            <NotificationProvider>
+              {children}
+            </NotificationProvider>
+          </LocationProvider>
         </AuthProvider>
       </body>
     </html>

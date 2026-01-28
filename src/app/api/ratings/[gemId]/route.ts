@@ -19,7 +19,7 @@ export async function GET(
       .select(
         `
         *,
-        user:users(id, full_name, avatar_url)
+        user:profiles(id, full_name, avatar_url)
       `,
         { count: 'exact' }
       )
@@ -123,7 +123,7 @@ export async function POST(
       .select(
         `
         *,
-        user:users(id, full_name, avatar_url)
+        user:profiles(id, full_name, avatar_url)
       `
       )
       .single();
@@ -187,7 +187,7 @@ export async function PUT(
       .select(
         `
         *,
-        user:users(id, full_name, avatar_url)
+        user:profiles(id, full_name, avatar_url)
       `
       )
       .single();

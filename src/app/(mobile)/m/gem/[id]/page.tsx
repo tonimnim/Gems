@@ -125,7 +125,7 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
       try {
         await navigator.share({
           title: gem.name,
-          text: `Check out ${gem.name} on Hidden Gems!`,
+          text: `Check out ${gem.name} on Gems!`,
           url: window.location.href,
         });
       } catch (err) {

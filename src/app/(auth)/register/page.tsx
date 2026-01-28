@@ -65,14 +65,13 @@ export default function RegisterPage() {
 
     try {
       const supabase = createClient();
-      const { error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           data: {
             full_name: data.full_name,
             country: data.country,
-            role: 'owner',
           },
         },
       });
@@ -82,8 +81,15 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push(ROUTES.dashboard);
-      router.refresh();
+      // Check if we have a session (user is logged in)
+      if (authData.session) {
+        // Small delay to ensure cookies are set
+        await new Promise(resolve => setTimeout(resolve, 100));
+        window.location.href = ROUTES.dashboard;
+      } else if (authData.user) {
+        // User created but no session - likely needs email confirmation
+        setError('Please check your email to confirm your account.');
+      }
     } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -100,7 +106,7 @@ export default function RegisterPage() {
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${ROUTES.dashboard}`,
+          redirectTo: `${window.location.origin}/auth/callback?redirect=${ROUTES.home}`,
         },
       });
 
@@ -152,7 +158,7 @@ export default function RegisterPage() {
             <div className="w-8 h-8 bg-[#00AA6C] rounded-lg flex items-center justify-center">
               <Gem className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold text-xl text-gray-900">Hidden Gems</span>
+            <span className="font-bold text-xl text-gray-900">Gems</span>
           </Link>
 
           {/* Benefits - positioned below with top margin */}
@@ -198,7 +204,7 @@ export default function RegisterPage() {
                 <div className="w-8 h-8 bg-[#00AA6C] rounded-lg flex items-center justify-center">
                   <Gem className="h-5 w-5 text-white" />
                 </div>
-                <span className="font-bold text-xl text-gray-900">Hidden Gems</span>
+                <span className="font-bold text-xl text-gray-900">Gems</span>
               </Link>
             </div>
 
@@ -368,7 +374,7 @@ export default function RegisterPage() {
 
       {/* Footer */}
       <div className="absolute bottom-6 left-[25%] z-20 flex items-center gap-6 text-sm text-white">
-        <span>&copy; Hidden Gems</span>
+        <span>&copy; Gems</span>
         <Link href="/privacy" className="hover:text-white/80">Privacy & terms</Link>
       </div>
     </div>

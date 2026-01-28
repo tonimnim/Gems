@@ -28,7 +28,7 @@ import { GEM_CATEGORIES } from '@/constants';
 import { approveGem, rejectGem } from './actions';
 import type { Gem, GemMedia, User as UserType } from '@/types';
 
-interface GemWithRelations extends Gem {
+interface GemWithRelations extends Omit<Gem, 'owner' | 'media'> {
   owner: Pick<UserType, 'id' | 'email' | 'full_name' | 'avatar_url'> | null;
   media: GemMedia[];
 }
