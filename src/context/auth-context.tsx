@@ -65,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (session?.user) {
       const userData = createUserFromAuth(session.user);
       setUser(userData);
-      // Update role in background
-      updateUserRole(session.user.id);
+      // Await role update from database
+      await updateUserRole(session.user.id);
     } else {
       setUser(null);
     }
