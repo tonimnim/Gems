@@ -9,13 +9,12 @@ import { useAuth } from '@/context/auth-context';
 
 const MOBILE_BREAKPOINT = 768;
 
-const baseNavItems = [
+const navItems = [
   { href: '/m', icon: Home, label: 'Home' },
   { href: '/m/explore', icon: Compass, label: 'Explore' },
   { href: '/m/saved', icon: Heart, label: 'Saved' },
+  { href: '/m/profile', icon: User, label: 'Profile', authRequired: true },
 ];
-
-const profileNavItem = { href: '/m/profile', icon: User, label: 'Profile' };
 
 export default function MobileLayout({
   children,
@@ -24,7 +23,7 @@ export default function MobileLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [isMobile, setIsMobile] = useState(true); // Assume mobile first
 
   // Fast redirect for desktop users
@@ -48,10 +47,6 @@ export default function MobileLayout({
     return () => window.removeEventListener('resize', checkDevice);
   }, [pathname, router]);
 
-  // Build nav items - add Profile tab if user is logged in (owner)
-  const navItems = isAuthenticated
-    ? [...baseNavItems, profileNavItem]
-    : baseNavItems;
 
   return (
     <div className="min-h-screen bg-white flex flex-col max-w-md mx-auto relative">
@@ -62,21 +57,19 @@ export default function MobileLayout({
 
       {/* Bottom Navigation - fixed */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 max-w-md mx-auto">
-        <div className={cn(
-          'flex items-center justify-around h-16 px-2',
-          isAuthenticated ? 'gap-0' : 'gap-0'
-        )}>
+        <div className="flex items-center justify-around h-16 px-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href ||
               (item.href !== '/m' && pathname.startsWith(item.href));
+            // Redirect to login if auth required and not authenticated
+            const href = item.authRequired && !isAuthenticated ? '/login' : item.href;
 
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={href}
                 className={cn(
-                  'flex flex-col items-center justify-center h-full transition-colors touch-feedback',
-                  isAuthenticated ? 'w-[25%]' : 'w-[33.33%]',
+                  'flex flex-col items-center justify-center h-full transition-colors touch-feedback w-[25%]',
                   isActive ? 'text-[#00AA6C]' : 'text-gray-400'
                 )}
               >

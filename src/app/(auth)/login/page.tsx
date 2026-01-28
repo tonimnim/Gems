@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { loginSchema, type LoginInput } from '@/lib/validations/auth';
 import { ROUTES } from '@/constants';
@@ -241,7 +241,14 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-[#092327] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#092327] flex items-center justify-center p-4 relative">
+      {/* Back button for mobile */}
+      <Link
+        href="/m"
+        className="absolute top-4 left-4 w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors md:hidden"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Link>
       <div className="w-full max-w-md">
         <Suspense fallback={
           <div className="bg-white rounded-2xl shadow-2xl p-8 animate-pulse">

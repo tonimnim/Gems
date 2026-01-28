@@ -43,11 +43,11 @@ export function CategoryPills({
       <button
         onClick={() => onSelect(null)}
         className={cn(
-          'flex-shrink-0 h-10 px-4 rounded-full text-sm font-medium transition-all touch-feedback',
-          'flex items-center gap-2',
+          'flex-shrink-0 py-1 px-3 rounded-full text-sm font-medium transition-all touch-feedback',
+          'flex items-center gap-1.5',
           selectedCategory === null
-            ? 'bg-[#00AA6C] text-white shadow-sm'
-            : 'bg-white text-gray-700 border border-gray-200'
+            ? 'bg-[#00AA6C] text-white'
+            : 'bg-gray-50 text-gray-700 border border-gray-100'
         )}
       >
         All
@@ -63,11 +63,11 @@ export function CategoryPills({
             key={category.id}
             onClick={() => onSelect(category.id)}
             className={cn(
-              'flex-shrink-0 h-10 px-4 rounded-full text-sm font-medium transition-all touch-feedback',
-              'flex items-center gap-2 whitespace-nowrap',
+              'flex-shrink-0 py-1 px-3 rounded-full text-sm font-medium transition-all touch-feedback',
+              'flex items-center gap-1.5 whitespace-nowrap',
               isSelected
-                ? 'bg-[#00AA6C] text-white shadow-sm'
-                : 'bg-white text-gray-700 border border-gray-200'
+                ? 'bg-[#00AA6C] text-white'
+                : 'bg-gray-50 text-gray-700 border border-gray-100'
             )}
           >
             {showIcons && Icon && (

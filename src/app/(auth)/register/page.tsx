@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Gem } from 'lucide-react';
+import { Eye, EyeOff, Gem, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { registerSchema, type RegisterInput } from '@/lib/validations/auth';
 import { ROUTES, AFRICAN_COUNTRIES } from '@/constants';
@@ -122,6 +122,14 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* Back button for mobile */}
+      <Link
+        href="/m"
+        className="absolute top-4 left-4 z-20 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors md:hidden"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Link>
+
       {/* Vertical dashed lines decoration */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Line 1 - far left */}
