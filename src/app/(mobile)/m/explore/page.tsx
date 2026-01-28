@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Filter, SlidersHorizontal } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import { useSavedGems } from '@/hooks/useSavedGems';
+import { createClient } from '@/lib/supabase/client';
 import {
   GemCard,
   GemCardSkeleton,
@@ -11,77 +12,59 @@ import {
 } from '@/components/mobile';
 import type { GemCategory } from '@/types';
 
-// Mock data
-const mockGems: GemCardData[] = [
-  {
-    id: '1',
-    name: 'Kazuri Beads Factory',
-    category: 'culture',
-    city: 'Karen',
-    country: 'KE',
-    average_rating: 4.8,
-    ratings_count: 124,
-    tier: 'featured',
-  },
-  {
-    id: '2',
-    name: 'Kitisuru Forest Trail',
-    category: 'nature',
-    city: 'Kitisuru',
-    country: 'KE',
-    average_rating: 4.6,
-    ratings_count: 89,
-    tier: 'standard',
-  },
-  {
-    id: '3',
-    name: 'Tin Roof Cafe',
-    category: 'eat_drink',
-    city: 'Westlands',
-    country: 'KE',
-    average_rating: 4.7,
-    ratings_count: 256,
-    tier: 'featured',
-  },
-  {
-    id: '4',
-    name: 'Giraffe Manor Gardens',
-    category: 'nature',
-    city: 'Langata',
-    country: 'KE',
-    average_rating: 4.9,
-    ratings_count: 412,
-    tier: 'featured',
-  },
-  {
-    id: '5',
-    name: 'Alchemist Bar',
-    category: 'entertainment',
-    city: 'Westlands',
-    country: 'KE',
-    average_rating: 4.5,
-    ratings_count: 178,
-    tier: 'standard',
-  },
-  {
-    id: '6',
-    name: 'Bomas of Kenya',
-    category: 'culture',
-    city: 'Langata',
-    country: 'KE',
-    average_rating: 4.4,
-    ratings_count: 321,
-    tier: 'standard',
-  },
-];
-
 export default function ExplorePage() {
   const [selectedCategory, setSelectedCategory] = useState<GemCategory | null>(null);
+  const [gems, setGems] = useState<GemCardData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toggleSave, isSaved } = useSavedGems();
 
-  const filteredGems = selectedCategory
-    ? mockGems.filter((gem) => gem.category === selectedCategory)
-    : mockGems;
+  const fetchGems = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const supabase = createClient();
+
+      let query = supabase
+        .from('gems')
+        .select('id, name, category, city, country, average_rating, ratings_count, tier')
+        .eq('status', 'approved')
+        .gt('current_term_end', new Date().toISOString())
+        .order('tier', { ascending: false })
+        .order('ratings_count', { ascending: false })
+        .limit(50);
+
+      if (selectedCategory) {
+        query = query.eq('category', selectedCategory);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching gems:', error);
+        setGems([]);
+      } else {
+        const gemCards: GemCardData[] = (data || []).map((gem) => ({
+          id: gem.id,
+          name: gem.name,
+          category: gem.category,
+          city: gem.city,
+          country: gem.country,
+          average_rating: gem.average_rating,
+          ratings_count: gem.ratings_count,
+          tier: gem.tier,
+        }));
+        setGems(gemCards);
+      }
+    } catch (error) {
+      console.error('Error fetching gems:', error);
+      setGems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    fetchGems();
+  }, [fetchGems]);
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -104,21 +87,47 @@ export default function ExplorePage() {
 
       {/* Content */}
       <main className="px-4 py-4">
-        <p className="text-sm text-gray-500 mb-4">
-          {filteredGems.length} gems found
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {filteredGems.map((gem) => (
-            <GemCard
-              key={gem.id}
-              gem={gem}
-              variant="vertical"
-              isSaved={isSaved(gem.id)}
-              onToggleSave={toggleSave}
-              showCategory
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <>
+            <div className="h-4 w-24 bg-gray-200 rounded mb-4 animate-pulse" />
+            <div className="grid grid-cols-2 gap-3">
+              <GemCardSkeleton variant="vertical" />
+              <GemCardSkeleton variant="vertical" />
+              <GemCardSkeleton variant="vertical" />
+              <GemCardSkeleton variant="vertical" />
+            </div>
+          </>
+        ) : gems.length > 0 ? (
+          <>
+            <p className="text-sm text-gray-500 mb-4">
+              {gems.length} gems found
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {gems.map((gem) => (
+                <GemCard
+                  key={gem.id}
+                  gem={gem}
+                  variant="vertical"
+                  isSaved={isSaved(gem.id)}
+                  onToggleSave={toggleSave}
+                  showCategory
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No gems found</p>
+            {selectedCategory && (
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="mt-2 text-[#00AA6C] font-medium"
+              >
+                View all gems
+              </button>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );

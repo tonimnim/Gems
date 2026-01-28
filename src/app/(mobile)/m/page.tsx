@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { MapPin, Bell, Search } from 'lucide-react';
+import { MapPin, Bell, Search, Loader2 } from 'lucide-react';
 import { useSavedGems } from '@/hooks/useSavedGems';
+import { createClient } from '@/lib/supabase/client';
 import {
   GemCard,
   GemCardSkeleton,
@@ -13,104 +14,64 @@ import {
 } from '@/components/mobile';
 import type { GemCategory } from '@/types';
 
-// Mock data - will be replaced with API calls
-const mockGems: GemCardData[] = [
-  {
-    id: '1',
-    name: 'Kazuri Beads Factory',
-    category: 'culture',
-    city: 'Karen',
-    country: 'KE',
-    average_rating: 4.8,
-    ratings_count: 124,
-    tier: 'featured',
-    distance: '2.3 km',
-  },
-  {
-    id: '2',
-    name: 'Kitisuru Forest Trail',
-    category: 'nature',
-    city: 'Kitisuru',
-    country: 'KE',
-    average_rating: 4.6,
-    ratings_count: 89,
-    tier: 'standard',
-    distance: '4.1 km',
-  },
-  {
-    id: '3',
-    name: 'Tin Roof Cafe',
-    category: 'eat_drink',
-    city: 'Westlands',
-    country: 'KE',
-    average_rating: 4.7,
-    ratings_count: 256,
-    tier: 'featured',
-    distance: '1.8 km',
-  },
-  {
-    id: '4',
-    name: 'Giraffe Manor Gardens',
-    category: 'nature',
-    city: 'Langata',
-    country: 'KE',
-    average_rating: 4.9,
-    ratings_count: 412,
-    tier: 'featured',
-    distance: '5.2 km',
-  },
-  {
-    id: '5',
-    name: 'Alchemist Bar',
-    category: 'entertainment',
-    city: 'Westlands',
-    country: 'KE',
-    average_rating: 4.5,
-    ratings_count: 178,
-    tier: 'standard',
-    distance: '2.0 km',
-  },
-  {
-    id: '6',
-    name: 'Bomas of Kenya',
-    category: 'culture',
-    city: 'Langata',
-    country: 'KE',
-    average_rating: 4.4,
-    ratings_count: 321,
-    tier: 'standard',
-    distance: '6.3 km',
-  },
-];
-
-
 export default function MobileHomePage() {
   const [selectedCategory, setSelectedCategory] = useState<GemCategory | null>(null);
+  const [gems, setGems] = useState<GemCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toggleSave, isSaved, isLoaded } = useSavedGems();
 
-  // Simulate loading
+  // Fetch gems from database
+  const fetchGems = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const supabase = createClient();
+
+      let query = supabase
+        .from('gems')
+        .select('id, name, category, city, country, average_rating, ratings_count, tier')
+        .eq('status', 'approved')
+        .gt('current_term_end', new Date().toISOString())
+        .order('tier', { ascending: false })
+        .order('ratings_count', { ascending: false })
+        .limit(20);
+
+      if (selectedCategory) {
+        query = query.eq('category', selectedCategory);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching gems:', error);
+        setGems([]);
+      } else {
+        // Map to GemCardData format
+        const gemCards: GemCardData[] = (data || []).map((gem) => ({
+          id: gem.id,
+          name: gem.name,
+          category: gem.category,
+          city: gem.city,
+          country: gem.country,
+          average_rating: gem.average_rating,
+          ratings_count: gem.ratings_count,
+          tier: gem.tier,
+        }));
+        setGems(gemCards);
+      }
+    } catch (error) {
+      console.error('Error fetching gems:', error);
+      setGems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCategory]);
+
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+    fetchGems();
+  }, [fetchGems]);
 
-  // Filter gems by category
-  const filteredGems = selectedCategory
-    ? mockGems.filter((gem) => gem.category === selectedCategory)
-    : mockGems;
-
-  const nearYouGems = [...filteredGems].sort((a, b) => {
-    const distA = parseFloat(a.distance?.replace(' km', '') || '999');
-    const distB = parseFloat(b.distance?.replace(' km', '') || '999');
-    return distA - distB;
-  });
-
-  const featuredGems = filteredGems.filter((gem) => gem.tier === 'featured');
-
-  const popularGems = [...filteredGems].sort(
-    (a, b) => b.ratings_count - a.ratings_count
-  );
+  const featuredGems = gems.filter((gem) => gem.tier === 'featured');
+  const popularGems = [...gems].sort((a, b) => b.ratings_count - a.ratings_count);
 
   const showContent = !isLoading && isLoaded;
 
@@ -130,7 +91,7 @@ export default function MobileHomePage() {
                   Location
                 </p>
                 <p className="text-sm font-semibold text-gray-900">
-                  Nairobi, Kenya
+                  Kenya
                 </p>
               </div>
             </button>
@@ -138,7 +99,6 @@ export default function MobileHomePage() {
             {/* Notifications */}
             <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center relative touch-feedback">
               <Bell className="h-5 w-5 text-gray-600" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
             </button>
           </div>
         </div>
@@ -163,45 +123,23 @@ export default function MobileHomePage() {
           />
         </div>
 
-        {/* Near You Section */}
-        <section className="mb-8">
-          <SectionHeader title="Near You" href="/m/explore?sort=distance" />
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth-touch -mx-4 px-4 pb-1">
-            {showContent ? (
-              nearYouGems.slice(0, 5).map((gem) => (
-                <GemCard
-                  key={gem.id}
-                  gem={gem}
-                  variant="horizontal"
-                  isSaved={isSaved(gem.id)}
-                  onToggleSave={toggleSave}
-                />
-              ))
-            ) : (
-              <>
-                <GemCardSkeleton variant="horizontal" />
-                <GemCardSkeleton variant="horizontal" />
-                <GemCardSkeleton variant="horizontal" />
-              </>
-            )}
-          </div>
-        </section>
-
         {/* Featured Gems Section */}
-        {featuredGems.length > 0 && (
+        {(isLoading || featuredGems.length > 0) && (
           <section className="mb-8">
             <SectionHeader title="Featured Gems" href="/m/explore?filter=featured" />
             <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth-touch -mx-4 px-4 pb-1">
               {showContent ? (
-                featuredGems.map((gem) => (
-                  <GemCard
-                    key={gem.id}
-                    gem={gem}
-                    variant="horizontal"
-                    isSaved={isSaved(gem.id)}
-                    onToggleSave={toggleSave}
-                  />
-                ))
+                featuredGems.length > 0 ? (
+                  featuredGems.map((gem) => (
+                    <GemCard
+                      key={gem.id}
+                      gem={gem}
+                      variant="horizontal"
+                      isSaved={isSaved(gem.id)}
+                      onToggleSave={toggleSave}
+                    />
+                  ))
+                ) : null
               ) : (
                 <>
                   <GemCardSkeleton variant="horizontal" />
@@ -217,16 +155,22 @@ export default function MobileHomePage() {
           <SectionHeader title="Popular" href="/m/explore?sort=popular" />
           <div className="grid grid-cols-2 gap-3">
             {showContent ? (
-              popularGems.slice(0, 4).map((gem) => (
-                <GemCard
-                  key={gem.id}
-                  gem={gem}
-                  variant="vertical"
-                  isSaved={isSaved(gem.id)}
-                  onToggleSave={toggleSave}
-                  showCategory
-                />
-              ))
+              popularGems.length > 0 ? (
+                popularGems.slice(0, 6).map((gem) => (
+                  <GemCard
+                    key={gem.id}
+                    gem={gem}
+                    variant="vertical"
+                    isSaved={isSaved(gem.id)}
+                    onToggleSave={toggleSave}
+                    showCategory
+                  />
+                ))
+              ) : (
+                <div className="col-span-2 text-center py-12">
+                  <p className="text-gray-500">No gems available yet</p>
+                </div>
+              )
             ) : (
               <>
                 <GemCardSkeleton variant="vertical" />
@@ -239,7 +183,7 @@ export default function MobileHomePage() {
         </section>
 
         {/* Empty state when filtering returns no results */}
-        {showContent && filteredGems.length === 0 && (
+        {showContent && gems.length === 0 && selectedCategory && (
           <div className="text-center py-12">
             <p className="text-gray-500">No gems found in this category</p>
             <button

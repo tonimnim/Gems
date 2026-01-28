@@ -1,199 +1,17 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { GemCard, CategoryFilter } from '@/components/gems';
 import { AFRICAN_COUNTRIES } from '@/constants';
+import { createClient } from '@/lib/supabase/client';
 import type { Gem, GemCategory } from '@/types';
-
-// Mock data for now - will be replaced with Supabase queries
-const mockGems: Gem[] = [
-  {
-    id: '1',
-    owner_id: '1',
-    name: 'The Secret Garden Restaurant',
-    slug: 'secret-garden-restaurant',
-    description: 'A hidden culinary paradise nestled in the heart of Nairobi',
-    category: 'eat_drink',
-    categories: ['eat_drink'],
-    country: 'KE',
-    city: 'Nairobi',
-    address: '123 Garden Lane',
-    status: 'approved',
-    tier: 'featured',
-    views_count: 1250,
-    average_rating: 4.8,
-    ratings_count: 89,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    media: [
-      {
-        id: '1',
-        gem_id: '1',
-        url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
-        type: 'image',
-        is_cover: true,
-        order: 0,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: '2',
-    owner_id: '2',
-    name: 'Ol Pejeta Bush Camp',
-    slug: 'ol-pejeta-bush-camp',
-    description: 'Experience wildlife like never before in this intimate camp',
-    category: 'stay',
-    categories: ['stay'],
-    country: 'KE',
-    city: 'Nanyuki',
-    address: 'Ol Pejeta Conservancy',
-    status: 'approved',
-    tier: 'standard',
-    views_count: 890,
-    average_rating: 4.9,
-    ratings_count: 156,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    media: [
-      {
-        id: '2',
-        gem_id: '2',
-        url: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=800',
-        type: 'image',
-        is_cover: true,
-        order: 0,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: '3',
-    owner_id: '3',
-    name: 'Hell\'s Gate National Park Viewpoint',
-    slug: 'hells-gate-viewpoint',
-    description: 'Breathtaking views of the Rift Valley you won\'t find in guidebooks',
-    category: 'nature',
-    categories: ['nature'],
-    country: 'KE',
-    city: 'Naivasha',
-    address: "Hell's Gate National Park",
-    status: 'approved',
-    tier: 'featured',
-    views_count: 2100,
-    average_rating: 4.7,
-    ratings_count: 234,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    media: [
-      {
-        id: '3',
-        gem_id: '3',
-        url: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800',
-        type: 'image',
-        is_cover: true,
-        order: 0,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: '4',
-    owner_id: '4',
-    name: 'The Jazz Lounge',
-    slug: 'jazz-lounge-lagos',
-    description: 'Lagos best kept secret for live jazz and soul music',
-    category: 'entertainment',
-    categories: ['entertainment'],
-    country: 'NG',
-    city: 'Lagos',
-    address: 'Victoria Island',
-    status: 'approved',
-    tier: 'standard',
-    views_count: 567,
-    average_rating: 4.5,
-    ratings_count: 78,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    media: [
-      {
-        id: '4',
-        gem_id: '4',
-        url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
-        type: 'image',
-        is_cover: true,
-        order: 0,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: '5',
-    owner_id: '5',
-    name: 'Cape Point Hiking Trail',
-    slug: 'cape-point-hiking',
-    description: 'A secret trail with panoramic ocean views',
-    category: 'adventure',
-    categories: ['adventure'],
-    country: 'ZA',
-    city: 'Cape Town',
-    address: 'Cape Point Nature Reserve',
-    status: 'approved',
-    tier: 'standard',
-    views_count: 1890,
-    average_rating: 4.9,
-    ratings_count: 312,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    media: [
-      {
-        id: '5',
-        gem_id: '5',
-        url: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800',
-        type: 'image',
-        is_cover: true,
-        order: 0,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: '6',
-    owner_id: '6',
-    name: 'Lamu Old Town Heritage Walk',
-    slug: 'lamu-heritage-walk',
-    description: 'Explore centuries-old Swahili architecture and culture',
-    category: 'culture',
-    categories: ['culture'],
-    country: 'KE',
-    city: 'Lamu',
-    address: 'Lamu Old Town',
-    status: 'approved',
-    tier: 'featured',
-    views_count: 756,
-    average_rating: 4.8,
-    ratings_count: 145,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    media: [
-      {
-        id: '6',
-        gem_id: '6',
-        url: 'https://images.unsplash.com/photo-1523805009345-7448845a9e53?w=800',
-        type: 'image',
-        is_cover: true,
-        order: 0,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-];
 
 function ExploreContent() {
   const searchParams = useSearchParams();
-  const [gems, setGems] = useState<Gem[]>(mockGems);
+  const [gems, setGems] = useState<Gem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<GemCategory | null>(
     (searchParams.get('category') as GemCategory) || null
   );
@@ -203,30 +21,54 @@ function ExploreContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  // Filter gems based on selections
-  useEffect(() => {
-    let filtered = mockGems;
+  // Fetch gems from database
+  const fetchGems = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const supabase = createClient();
 
-    if (selectedCategory) {
-      filtered = filtered.filter((gem) => gem.category === selectedCategory);
+      let query = supabase
+        .from('gems')
+        .select(`
+          *,
+          media:gem_media(*)
+        `)
+        .eq('status', 'approved')
+        .gt('current_term_end', new Date().toISOString())
+        .order('tier', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (selectedCategory) {
+        query = query.eq('category', selectedCategory);
+      }
+
+      if (selectedCountry) {
+        query = query.eq('country', selectedCountry);
+      }
+
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching gems:', error);
+        setGems([]);
+      } else {
+        setGems(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching gems:', error);
+      setGems([]);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (selectedCountry) {
-      filtered = filtered.filter((gem) => gem.country === selectedCountry);
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (gem) =>
-          gem.name.toLowerCase().includes(query) ||
-          gem.description.toLowerCase().includes(query) ||
-          gem.city.toLowerCase().includes(query)
-      );
-    }
-
-    setGems(filtered);
   }, [selectedCategory, selectedCountry, searchQuery]);
+
+  useEffect(() => {
+    fetchGems();
+  }, [fetchGems]);
 
   const handleFavoriteToggle = (gemId: string) => {
     setFavorites((prev) => {
@@ -301,7 +143,11 @@ function ExploreContent() {
         </div>
 
         {/* Results */}
-        {gems.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-[#00AA6C]" />
+          </div>
+        ) : gems.length > 0 ? (
           <>
             <p className="mb-4 text-sm text-gray-500">
               {gems.length} {gems.length === 1 ? 'gem' : 'gems'} found

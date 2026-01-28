@@ -3,53 +3,56 @@
 import { useEffect, useState } from 'react';
 import { Heart } from 'lucide-react';
 import { useSavedGems } from '@/hooks/useSavedGems';
+import { createClient } from '@/lib/supabase/client';
 import { GemCard, GemCardSkeleton, type GemCardData } from '@/components/mobile';
-
-// Mock data - in real app, fetch saved gems from API based on IDs
-const mockGems: GemCardData[] = [
-  {
-    id: '1',
-    name: 'Kazuri Beads Factory',
-    category: 'culture',
-    city: 'Karen',
-    country: 'KE',
-    average_rating: 4.8,
-    ratings_count: 124,
-    tier: 'featured',
-  },
-  {
-    id: '3',
-    name: 'Tin Roof Cafe',
-    category: 'eat_drink',
-    city: 'Westlands',
-    country: 'KE',
-    average_rating: 4.7,
-    ratings_count: 256,
-    tier: 'featured',
-  },
-  {
-    id: '4',
-    name: 'Giraffe Manor Gardens',
-    category: 'nature',
-    city: 'Langata',
-    country: 'KE',
-    average_rating: 4.9,
-    ratings_count: 412,
-    tier: 'featured',
-  },
-];
-
 export default function SavedPage() {
   const { savedGems, toggleSave, isSaved, isLoaded } = useSavedGems();
   const [savedGemData, setSavedGemData] = useState<GemCardData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // In real app, fetch saved gems from API
+  // Fetch saved gems from database
   useEffect(() => {
-    if (isLoaded) {
-      // Filter mock data to only show saved gems
-      const saved = mockGems.filter((gem) => savedGems.includes(gem.id));
-      setSavedGemData(saved);
+    async function fetchSavedGems() {
+      if (!isLoaded || savedGems.length === 0) {
+        setSavedGemData([]);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('gems')
+          .select('id, name, category, city, country, average_rating, ratings_count, tier')
+          .in('id', savedGems)
+          .eq('status', 'approved');
+
+        if (error) {
+          console.error('Error fetching saved gems:', error);
+          setSavedGemData([]);
+        } else {
+          const gemCards: GemCardData[] = (data || []).map((gem) => ({
+            id: gem.id,
+            name: gem.name,
+            category: gem.category,
+            city: gem.city,
+            country: gem.country,
+            average_rating: gem.average_rating,
+            ratings_count: gem.ratings_count,
+            tier: gem.tier,
+          }));
+          setSavedGemData(gemCards);
+        }
+      } catch (error) {
+        console.error('Error fetching saved gems:', error);
+        setSavedGemData([]);
+      } finally {
+        setIsLoading(false);
+      }
     }
+
+    fetchSavedGems();
   }, [savedGems, isLoaded]);
 
   return (
@@ -66,7 +69,7 @@ export default function SavedPage() {
 
       {/* Content */}
       <main className="px-4 py-4">
-        {!isLoaded ? (
+        {!isLoaded || isLoading ? (
           <div className="grid grid-cols-2 gap-3">
             <GemCardSkeleton variant="vertical" />
             <GemCardSkeleton variant="vertical" />

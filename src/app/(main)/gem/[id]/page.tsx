@@ -3,10 +3,10 @@
 import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { isCloudinaryUrl } from '@/lib/cloudinary';
 import { CloudinaryImage } from '@/components/ui';
 import {
-  ArrowLeft,
   MapPin,
   Phone,
   Mail,
@@ -22,84 +22,22 @@ import {
   Navigation,
   Loader2,
 } from 'lucide-react';
-import { Button, Badge, StarRating, Avatar, AvatarImage, AvatarFallback, Textarea } from '@/components/ui';
+import { Button, StarRating, Avatar, AvatarImage, AvatarFallback, Textarea } from '@/components/ui';
 import { GEM_CATEGORIES, ROUTES } from '@/constants';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import type { Gem, Rating, MenuItem } from '@/types';
 
-// Mock data - will be replaced with actual data fetching
-const mockGem: Gem = {
-  id: '1',
-  owner_id: '1',
-  name: 'The Secret Garden Restaurant',
-  slug: 'secret-garden-restaurant',
-  description:
-    'A hidden culinary paradise nestled in the heart of Nairobi. The Secret Garden Restaurant offers an unforgettable dining experience with locally sourced ingredients, creative fusion cuisine, and an enchanting garden atmosphere. Perfect for romantic dinners, special occasions, or simply escaping the city bustle.\n\nOur chef brings over 15 years of experience from top restaurants across Africa and Europe, creating a unique menu that celebrates Kenyan flavors with international techniques.',
-  category: 'eat_drink',
-  categories: ['eat_drink'],
-  country: 'KE',
-  city: 'Nairobi',
-  address: '123 Garden Lane, Westlands, Nairobi',
-  latitude: -1.2641,
-  longitude: 36.8034,
-  phone: '+254 700 123 456',
-  email: 'info@secretgarden.co.ke',
-  website: 'https://secretgarden.co.ke',
-  opening_hours: undefined,
-  price_range: undefined,
-  status: 'approved',
-  tier: 'featured',
-  views_count: 1250,
-  average_rating: 4.8,
-  ratings_count: 89,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  media: [
-    {
-      id: '1',
-      gem_id: '1',
-      url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200',
-      type: 'image',
-      is_cover: true,
-      order: 0,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      gem_id: '1',
-      url: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200',
-      type: 'image',
-      is_cover: false,
-      order: 1,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '3',
-      gem_id: '1',
-      url: 'https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=1200',
-      type: 'image',
-      is_cover: false,
-      order: 2,
-      created_at: new Date().toISOString(),
-    },
-  ],
-  owner: {
-    id: '1',
-    email: 'owner@example.com',
-    full_name: 'John Kamau',
-    role: 'owner',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-};
-
 type TabType = 'overview' | 'menu' | 'reviews';
 
 export default function GemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const { user } = useAuth();
+  const [gem, setGem] = useState<Gem | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [newRating, setNewRating] = useState(0);
@@ -113,20 +51,44 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
   const [userHasReviewed, setUserHasReviewed] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // In real app, fetch gem data based on id
-  const gem = mockGem;
-  const category = GEM_CATEGORIES[gem.category];
+  // Fetch gem data
+  useEffect(() => {
+    async function fetchGem() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/gems/${id}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          setError(result.error || 'Gem not found');
+          return;
+        }
+
+        setGem(result.data);
+      } catch (err) {
+        console.error('Error fetching gem:', err);
+        setError('Failed to load gem');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchGem();
+  }, [id]);
 
   // Fetch ratings
   useEffect(() => {
     async function fetchRatings() {
+      if (!gem) return;
+
       setRatingsLoading(true);
       try {
         const response = await fetch(`/api/ratings/${gem.id}`);
         const result = await response.json();
         if (result.data) {
           setRatings(result.data);
-          // Check if current user has already reviewed
           if (user) {
             const hasReviewed = result.data.some((r: Rating) => r.user_id === user.id);
             setUserHasReviewed(hasReviewed);
@@ -140,15 +102,12 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
     }
 
     fetchRatings();
-  }, [gem.id, user]);
-
-  // Check if this gem type should show menu (restaurants, cafes, etc.)
-  const showMenuTab = gem.category === 'eat_drink';
+  }, [gem, user]);
 
   // Fetch menu items for eat_drink gems
   useEffect(() => {
     async function fetchMenu() {
-      if (gem.category !== 'eat_drink') return;
+      if (!gem || gem.category !== 'eat_drink') return;
 
       setMenuLoading(true);
       const supabase = createClient();
@@ -165,7 +124,36 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
     }
 
     fetchMenu();
-  }, [gem.id, gem.category]);
+  }, [gem]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#00AA6C]" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !gem) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Gem not found</h1>
+          <p className="text-gray-600 mb-6">{error || 'This gem does not exist or is not available.'}</p>
+          <Link href={ROUTES.explore}>
+            <Button className="bg-[#00AA6C] hover:bg-[#008855]">
+              Explore Gems
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const category = GEM_CATEGORIES[gem.category];
+  const showMenuTab = gem.category === 'eat_drink';
 
   // Group menu items by category
   const menuByCategory = menuItems.reduce((acc, item) => {
@@ -192,7 +180,6 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
     setSubmitting(true);
     setSubmitError(null);
 
-    // Create optimistic review
     const optimisticReview: Rating = {
       id: `temp-${Date.now()}`,
       gem_id: gem.id,
@@ -212,11 +199,9 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
       },
     };
 
-    // Optimistically add to UI
     setRatings((prev) => [optimisticReview, ...prev]);
     setUserHasReviewed(true);
 
-    // Clear form immediately for instant feedback
     const submittedRating = newRating;
     const submittedComment = newComment;
     setNewRating(0);
@@ -238,12 +223,10 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
         throw new Error(result.error || 'Failed to submit review');
       }
 
-      // Replace optimistic review with real one
       setRatings((prev) =>
         prev.map((r) => (r.id === optimisticReview.id ? result.data : r))
       );
     } catch (error) {
-      // Rollback on error
       setRatings((prev) => prev.filter((r) => r.id !== optimisticReview.id));
       setUserHasReviewed(false);
       setNewRating(submittedRating);
@@ -713,19 +696,21 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-5">Contact & Info</h2>
                 <div className="space-y-4">
-                  <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(gem.address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-start gap-3 group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-[#00AA6C]/10 transition-colors">
-                      <MapPin className="h-4 w-4 text-gray-600 group-hover:text-[#00AA6C] transition-colors" strokeWidth={1.5} />
-                    </div>
-                    <span className="text-sm text-gray-700 group-hover:text-[#00AA6C] transition-colors pt-1.5">
-                      {gem.address}
-                    </span>
-                  </a>
+                  {gem.address && (
+                    <a
+                      href={`https://maps.google.com/?q=${encodeURIComponent(gem.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-3 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-[#00AA6C]/10 transition-colors">
+                        <MapPin className="h-4 w-4 text-gray-600 group-hover:text-[#00AA6C] transition-colors" strokeWidth={1.5} />
+                      </div>
+                      <span className="text-sm text-gray-700 group-hover:text-[#00AA6C] transition-colors pt-1.5">
+                        {gem.address}
+                      </span>
+                    </a>
+                  )}
                   {gem.phone && (
                     <a
                       href={`tel:${gem.phone}`}
@@ -787,21 +772,23 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
               </div>
 
               {/* Location */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Location</h2>
-                <div className="aspect-[4/3] bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-sm mb-4">
-                  Map coming soon
+              {gem.address && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Location</h2>
+                  <div className="aspect-[4/3] bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-sm mb-4">
+                    Map coming soon
+                  </div>
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(gem.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                  >
+                    <Navigation className="h-4 w-4" strokeWidth={1.5} />
+                    Get Directions
+                  </a>
                 </div>
-                <a
-                  href={`https://maps.google.com/?q=${encodeURIComponent(gem.address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors"
-                >
-                  <Navigation className="h-4 w-4" strokeWidth={1.5} />
-                  Get Directions
-                </a>
-              </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,92 +1,76 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, X, Clock, TrendingUp } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Search, X, TrendingUp, Loader2 } from 'lucide-react';
 import { useSavedGems } from '@/hooks/useSavedGems';
-import { GemCard, type GemCardData } from '@/components/mobile';
+import { createClient } from '@/lib/supabase/client';
+import { GemCard, GemCardSkeleton, type GemCardData } from '@/components/mobile';
 import { cn } from '@/lib/utils';
-
-// Mock data
-const mockGems: GemCardData[] = [
-  {
-    id: '1',
-    name: 'Kazuri Beads Factory',
-    category: 'culture',
-    city: 'Karen',
-    country: 'KE',
-    average_rating: 4.8,
-    ratings_count: 124,
-    tier: 'featured',
-  },
-  {
-    id: '2',
-    name: 'Kitisuru Forest Trail',
-    category: 'nature',
-    city: 'Kitisuru',
-    country: 'KE',
-    average_rating: 4.6,
-    ratings_count: 89,
-    tier: 'standard',
-  },
-  {
-    id: '3',
-    name: 'Tin Roof Cafe',
-    category: 'eat_drink',
-    city: 'Westlands',
-    country: 'KE',
-    average_rating: 4.7,
-    ratings_count: 256,
-    tier: 'featured',
-  },
-  {
-    id: '4',
-    name: 'Giraffe Manor Gardens',
-    category: 'nature',
-    city: 'Langata',
-    country: 'KE',
-    average_rating: 4.9,
-    ratings_count: 412,
-    tier: 'featured',
-  },
-  {
-    id: '5',
-    name: 'Alchemist Bar',
-    category: 'entertainment',
-    city: 'Westlands',
-    country: 'KE',
-    average_rating: 4.5,
-    ratings_count: 178,
-    tier: 'standard',
-  },
-];
-
 const trendingSearches = [
   'Restaurants',
-  'Nature walks',
-  'Art galleries',
-  'Rooftop bars',
-  'Hidden beaches',
+  'Nature',
+  'Culture',
+  'Adventure',
+  'Entertainment',
 ];
 
 export default function SearchPage() {
-  const router = useRouter();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [searchResults, setSearchResults] = useState<GemCardData[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const { toggleSave, isSaved } = useSavedGems();
 
-  const searchResults = useMemo(() => {
-    if (!query.trim()) return [];
-    const lowerQuery = query.toLowerCase();
-    return mockGems.filter(
-      (gem) =>
-        gem.name.toLowerCase().includes(lowerQuery) ||
-        gem.city.toLowerCase().includes(lowerQuery)
-    );
+  // Search with debounce
+  useEffect(() => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('gems')
+          .select('id, name, category, city, country, average_rating, ratings_count, tier')
+          .eq('status', 'approved')
+          .gt('current_term_end', new Date().toISOString())
+          .or(`name.ilike.%${query}%,city.ilike.%${query}%,description.ilike.%${query}%`)
+          .order('ratings_count', { ascending: false })
+          .limit(20);
+
+        if (error) {
+          console.error('Search error:', error);
+          setSearchResults([]);
+        } else {
+          const gemCards: GemCardData[] = (data || []).map((gem) => ({
+            id: gem.id,
+            name: gem.name,
+            category: gem.category,
+            city: gem.city,
+            country: gem.country,
+            average_rating: gem.average_rating,
+            ratings_count: gem.ratings_count,
+            tier: gem.tier,
+          }));
+          setSearchResults(gemCards);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [query]);
 
   const handleClear = useCallback(() => {
     setQuery('');
+    setSearchResults([]);
   }, []);
 
   const handleTrendingClick = useCallback((term: string) => {
@@ -156,29 +140,37 @@ export default function SearchPage() {
         {/* Search results */}
         {showResults && (
           <div>
-            <p className="text-sm text-gray-500 mb-4">
-              {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'} for &quot;{query}&quot;
-            </p>
-            {searchResults.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {searchResults.map((gem) => (
-                  <GemCard
-                    key={gem.id}
-                    gem={gem}
-                    variant="vertical"
-                    isSaved={isSaved(gem.id)}
-                    onToggleSave={toggleSave}
-                    showCategory
-                  />
-                ))}
+            {isSearching ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-[#00AA6C]" />
               </div>
             ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No gems found</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Try a different search term
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'} for &quot;{query}&quot;
                 </p>
-              </div>
+                {searchResults.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {searchResults.map((gem) => (
+                      <GemCard
+                        key={gem.id}
+                        gem={gem}
+                        variant="vertical"
+                        isSaved={isSaved(gem.id)}
+                        onToggleSave={toggleSave}
+                        showCategory
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">No gems found</p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Try a different search term
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

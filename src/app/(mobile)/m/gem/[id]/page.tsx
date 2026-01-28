@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowLeft,
   Share2,
@@ -15,91 +16,16 @@ import {
   Navigation,
   ChevronRight,
   ChevronLeft,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSavedGems } from '@/hooks/useSavedGems';
+import { createClient } from '@/lib/supabase/client';
 import { GemCard, SectionHeader, type GemCardData } from '@/components/mobile';
-import { GEM_CATEGORIES } from '@/constants';
-import type { GemCategory } from '@/types';
-
-// Mock gem data - will be replaced with API call
-const mockGem = {
-  id: '1',
-  name: 'Kazuri Beads Factory',
-  category: 'culture' as GemCategory,
-  description: `Kazuri, which means "small and beautiful" in Swahili, began in 1975 as a tiny workshop experimenting tried to help two single mothers. Today, Kazuri has grown to become one of Kenya's most successful social enterprises, employing over 340 women.
-
-The factory offers guided tours where you can watch skilled artisans hand-craft beautiful ceramic beads and pottery. Each piece is unique, hand-painted with vibrant African designs. The on-site shop offers a stunning collection of jewelry, home décor, and gifts.
-
-A visit here is not just shopping - it's an experience that supports local women and preserves traditional craftsmanship.`,
-  city: 'Karen',
-  country: 'Kenya',
-  address: 'Mbagathi Ridge, Karen, Nairobi',
-  latitude: -1.3167,
-  longitude: 36.7167,
-  phone: '+254 20 288 2905',
-  website: 'https://kazuri.com',
-  opening_hours: 'Mon-Sat: 8:30 AM - 5:00 PM\nSun: 10:00 AM - 4:00 PM',
-  price_range: 'Free entry, items from KES 200',
-  average_rating: 4.8,
-  ratings_count: 124,
-  tier: 'featured' as const,
-  images: [
-    '/images/gem-1.jpg',
-    '/images/gem-2.jpg',
-    '/images/gem-3.jpg',
-  ],
-};
-
-const mockReviews = [
-  {
-    id: '1',
-    user_name: 'Sarah M.',
-    user_avatar: null,
-    rating: 5,
-    comment: 'Absolutely loved the tour! The women here are so talented and the jewelry is stunning. A must-visit when in Nairobi.',
-    created_at: '2024-01-15',
-  },
-  {
-    id: '2',
-    user_name: 'James K.',
-    user_avatar: null,
-    rating: 4,
-    comment: 'Great experience and beautiful products. The tour guide was very knowledgeable about the history.',
-    created_at: '2024-01-10',
-  },
-  {
-    id: '3',
-    user_name: 'Emily R.',
-    user_avatar: null,
-    rating: 5,
-    comment: 'Such an inspiring place! Bought some lovely gifts for friends back home.',
-    created_at: '2024-01-05',
-  },
-];
-
-const similarGems: GemCardData[] = [
-  {
-    id: '6',
-    name: 'Bomas of Kenya',
-    category: 'culture',
-    city: 'Langata',
-    country: 'KE',
-    average_rating: 4.4,
-    ratings_count: 321,
-    tier: 'standard',
-  },
-  {
-    id: '4',
-    name: 'Giraffe Manor Gardens',
-    category: 'nature',
-    city: 'Langata',
-    country: 'KE',
-    average_rating: 4.9,
-    ratings_count: 412,
-    tier: 'featured',
-  },
-];
+import { GEM_CATEGORIES, ROUTES } from '@/constants';
+import { isCloudinaryUrl } from '@/lib/cloudinary';
+import { CloudinaryImage } from '@/components/ui';
+import type { Gem, Rating, GemCategory } from '@/types';
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -110,15 +36,104 @@ function formatDate(dateString: string): string {
   });
 }
 
-export default function GemDetailPage({ params }: { params: { id: string } }) {
+export default function GemDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
+  const [gem, setGem] = useState<Gem | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [reviews, setReviews] = useState<Rating[]>([]);
+  const [similarGems, setSimilarGems] = useState<GemCardData[]>([]);
   const { toggleSave, isSaved } = useSavedGems();
 
-  const gem = mockGem; // Will fetch by params.id
+  // Fetch gem data
+  useEffect(() => {
+    async function fetchGem() {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/gems/${id}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          setError(result.error || 'Gem not found');
+          return;
+        }
+
+        setGem(result.data);
+
+        // Fetch reviews
+        const reviewsRes = await fetch(`/api/ratings/${id}`);
+        const reviewsData = await reviewsRes.json();
+        if (reviewsData.data) {
+          setReviews(reviewsData.data);
+        }
+
+        // Fetch similar gems
+        const supabase = createClient();
+        const { data: similar } = await supabase
+          .from('gems')
+          .select('id, name, category, city, country, average_rating, ratings_count, tier')
+          .eq('status', 'approved')
+          .gt('current_term_end', new Date().toISOString())
+          .eq('category', result.data.category)
+          .neq('id', id)
+          .limit(4);
+
+        if (similar) {
+          setSimilarGems(similar.map((g) => ({
+            id: g.id,
+            name: g.name,
+            category: g.category,
+            city: g.city,
+            country: g.country,
+            average_rating: g.average_rating,
+            ratings_count: g.ratings_count,
+            tier: g.tier,
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching gem:', err);
+        setError('Failed to load gem');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchGem();
+  }, [id]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#00AA6C]" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !gem) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Gem not found</h1>
+          <p className="text-gray-600 mb-6">{error || 'This gem does not exist.'}</p>
+          <button
+            onClick={() => router.back()}
+            className="px-6 py-2 bg-[#00AA6C] text-white rounded-xl font-medium"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const categoryInfo = GEM_CATEGORIES[gem.category];
   const saved = isSaved(gem.id);
+  const images = gem.media || [];
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -135,7 +150,10 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
   };
 
   const handleDirections = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${gem.latitude},${gem.longitude}`;
+    const destination = gem.latitude && gem.longitude
+      ? `${gem.latitude},${gem.longitude}`
+      : encodeURIComponent(gem.address || `${gem.city}, ${gem.country}`);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
     window.open(url, '_blank');
   };
 
@@ -147,13 +165,13 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
 
   const nextImage = () => {
     setCurrentImageIndex((prev) =>
-      prev === gem.images.length - 1 ? 0 : prev + 1
+      prev === images.length - 1 ? 0 : prev + 1
     );
   };
 
   const prevImage = () => {
     setCurrentImageIndex((prev) =>
-      prev === 0 ? gem.images.length - 1 : prev - 1
+      prev === 0 ? images.length - 1 : prev - 1
     );
   };
 
@@ -161,21 +179,41 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
     <div className="min-h-screen bg-white pb-24">
       {/* Image Gallery */}
       <div className="relative">
-        {/* Image */}
         <div className="relative aspect-[4/3] bg-gray-100">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-200 to-emerald-300 flex items-center justify-center">
-            <span className="text-6xl opacity-30">
-              {categoryInfo?.icon === 'Landmark' && '🏛️'}
-              {categoryInfo?.icon === 'UtensilsCrossed' && '🍽️'}
-              {categoryInfo?.icon === 'Trees' && '🌳'}
-              {categoryInfo?.icon === 'Bed' && '🛏️'}
-              {categoryInfo?.icon === 'Mountain' && '⛰️'}
-              {categoryInfo?.icon === 'Music' && '🎵'}
-            </span>
-          </div>
+          {images.length > 0 ? (
+            isCloudinaryUrl(images[currentImageIndex].url) ? (
+              <CloudinaryImage
+                src={images[currentImageIndex].url}
+                alt={gem.name}
+                fill
+                className="object-cover"
+                priority
+                preset="cover"
+              />
+            ) : (
+              <Image
+                src={images[currentImageIndex].url}
+                alt={gem.name}
+                fill
+                className="object-cover"
+                priority
+                unoptimized
+              />
+            )
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-200 to-emerald-300 flex items-center justify-center">
+              <span className="text-6xl opacity-30">
+                {categoryInfo?.icon === 'Landmark' && '🏛️'}
+                {categoryInfo?.icon === 'UtensilsCrossed' && '🍽️'}
+                {categoryInfo?.icon === 'Trees' && '🌳'}
+                {categoryInfo?.icon === 'Bed' && '🛏️'}
+                {categoryInfo?.icon === 'Mountain' && '⛰️'}
+                {categoryInfo?.icon === 'Music' && '🎵'}
+              </span>
+            </div>
+          )}
 
-          {/* Image navigation arrows */}
-          {gem.images.length > 1 && (
+          {images.length > 1 && (
             <>
               <button
                 onClick={prevImage}
@@ -189,16 +227,12 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
               >
                 <ChevronRight className="h-5 w-5 text-white" />
               </button>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/50 backdrop-blur-sm rounded-full">
+                <span className="text-xs text-white font-medium">
+                  {currentImageIndex + 1} / {images.length}
+                </span>
+              </div>
             </>
-          )}
-
-          {/* Image counter */}
-          {gem.images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/50 backdrop-blur-sm rounded-full">
-              <span className="text-xs text-white font-medium">
-                {currentImageIndex + 1} / {gem.images.length}
-              </span>
-            </div>
           )}
         </div>
 
@@ -264,7 +298,7 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
 
         <div className="flex items-center gap-1 mt-2 text-gray-600">
           <MapPin className="h-4 w-4 text-gray-400" />
-          <span className="text-sm">{gem.address}</span>
+          <span className="text-sm">{gem.address || `${gem.city}, ${gem.country}`}</span>
         </div>
 
         {/* Quick Actions */}
@@ -311,7 +345,7 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
             >
               {gem.description}
             </p>
-            {gem.description.length > 200 && (
+            {gem.description && gem.description.length > 200 && (
               <button
                 onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
                 className="text-[#00AA6C] font-medium text-sm mt-2"
@@ -392,13 +426,15 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900">Reviews</h2>
-            <Link
-              href={`/m/gem/${gem.id}/reviews`}
-              className="text-sm text-[#00AA6C] font-medium flex items-center gap-0.5"
-            >
-              See all
-              <ChevronRight className="h-4 w-4" />
-            </Link>
+            {reviews.length > 2 && (
+              <Link
+                href={`/gem/${gem.id}`}
+                className="text-sm text-[#00AA6C] font-medium flex items-center gap-0.5"
+              >
+                See all
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            )}
           </div>
 
           {/* Rating summary */}
@@ -420,82 +456,74 @@ export default function GemDetailPage({ params }: { params: { id: string } }) {
               </div>
               <p className="text-xs text-gray-500 mt-1">{gem.ratings_count} reviews</p>
             </div>
-            <div className="flex-1 space-y-1.5">
-              {[5, 4, 3, 2, 1].map((rating) => {
-                const percentage = rating === 5 ? 70 : rating === 4 ? 20 : rating === 3 ? 7 : 3;
-                return (
-                  <div key={rating} className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 w-3">{rating}</span>
-                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-amber-400 rounded-full"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
 
           {/* Review list */}
-          <div className="space-y-4">
-            {mockReviews.slice(0, 2).map((review) => (
-              <div key={review.id} className="border-b border-gray-100 pb-4 last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-gray-600">
-                      {review.user_name.charAt(0)}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{review.user_name}</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={cn(
-                              'h-3 w-3',
-                              star <= review.rating
-                                ? 'fill-amber-400 text-amber-400'
-                                : 'fill-gray-200 text-gray-200'
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        {formatDate(review.created_at)}
+          {reviews.length > 0 ? (
+            <div className="space-y-4">
+              {reviews.slice(0, 2).map((review) => (
+                <div key={review.id} className="border-b border-gray-100 pb-4 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-gray-600">
+                        {review.user?.full_name?.charAt(0) || '?'}
                       </span>
                     </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{review.user?.full_name}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={cn(
+                                'h-3 w-3',
+                                star <= review.score
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'fill-gray-200 text-gray-200'
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {formatDate(review.created_at)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
+                  {review.comment && (
+                    <p className="text-gray-600 text-sm mt-2 leading-relaxed">
+                      {review.comment}
+                    </p>
+                  )}
                 </div>
-                <p className="text-gray-600 text-sm mt-2 leading-relaxed">
-                  {review.comment}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm text-center py-4">No reviews yet</p>
+          )}
         </section>
 
         {/* Divider */}
-        <div className="h-px bg-gray-100 my-5" />
+        {similarGems.length > 0 && <div className="h-px bg-gray-100 my-5" />}
 
         {/* Similar Gems */}
-        <section className="mb-4">
-          <SectionHeader title="Similar Gems" href="/m/explore?category=culture" />
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-            {similarGems.map((similarGem) => (
-              <GemCard
-                key={similarGem.id}
-                gem={similarGem}
-                variant="horizontal"
-                isSaved={isSaved(similarGem.id)}
-                onToggleSave={toggleSave}
-              />
-            ))}
-          </div>
-        </section>
+        {similarGems.length > 0 && (
+          <section className="mb-4">
+            <SectionHeader title="Similar Gems" href={`/m/explore?category=${gem.category}`} />
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+              {similarGems.map((similarGem) => (
+                <GemCard
+                  key={similarGem.id}
+                  gem={similarGem}
+                  variant="horizontal"
+                  isSaved={isSaved(similarGem.id)}
+                  onToggleSave={toggleSave}
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Sticky Bottom Bar */}
