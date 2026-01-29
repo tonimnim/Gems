@@ -1,6 +1,4 @@
 import type { NextConfig } from 'next';
-// @ts-expect-error - next-pwa doesn't have types
-import withPWA from 'next-pwa';
 
 const nextConfig: NextConfig = {
   // Image optimization domains
@@ -30,9 +28,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'date-fns'],
   },
 
-  // Required for next-pwa compatibility with Turbopack
-  turbopack: {},
-
   // Headers for PWA
   async headers() {
     return [
@@ -57,11 +52,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-const withPWAConfig = withPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-});
-
-export default withPWAConfig(nextConfig);
+export default nextConfig;
