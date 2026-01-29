@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Gem, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Gem } from 'lucide-react';
+import { BottomNav } from '@/components/mobile';
 import { createClient } from '@/lib/supabase/client';
 import { registerSchema, type RegisterInput } from '@/lib/validations/auth';
 import { ROUTES, AFRICAN_COUNTRIES } from '@/constants';
@@ -121,15 +122,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden">
-      {/* Back button for mobile */}
-      <Link
-        href="/m"
-        className="absolute top-4 left-4 z-20 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors md:hidden"
-      >
-        <ArrowLeft className="h-5 w-5" />
-      </Link>
-
+    <div className="h-screen bg-white relative overflow-hidden md:min-h-screen md:h-auto">
       {/* Vertical dashed lines decoration */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Line 1 - far left */}
@@ -204,21 +197,21 @@ export default function RegisterPage() {
         </div>
 
         {/* Col 3 - Form */}
-        <div className="col-span-12 lg:col-span-4 flex items-start justify-center pt-16 lg:pt-24 pb-8">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-xl border border-gray-100 p-8">
+        <div className="col-span-12 lg:col-span-4 flex items-center md:items-start justify-center pt-2 md:pt-16 lg:pt-24 pb-20 md:pb-8">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-xl border border-gray-100 p-4 md:p-8">
             {/* Mobile logo */}
-            <div className="lg:hidden flex justify-center mb-6">
+            <div className="lg:hidden flex justify-center mb-2 md:mb-6">
               <Link href="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-[#00AA6C] rounded-lg flex items-center justify-center">
-                  <Gem className="h-5 w-5 text-white" />
+                <div className="w-7 h-7 md:w-8 md:h-8 bg-[#00AA6C] rounded-lg flex items-center justify-center">
+                  <Gem className="h-4 w-4 md:h-5 md:w-5 text-white" />
                 </div>
-                <span className="font-bold text-xl text-gray-900">Gems</span>
+                <span className="font-bold text-lg md:text-xl text-gray-900">Gems</span>
               </Link>
             </div>
 
             {/* Header */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-gray-900">
+            <div className="mb-3 md:mb-6">
+              <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
                 Create your account
               </h1>
             </div>
@@ -231,7 +224,7 @@ export default function RegisterPage() {
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-2 md:space-y-4">
               {/* Full Name */}
               <div>
                 <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -241,7 +234,7 @@ export default function RegisterPage() {
                   id="full_name"
                   type="text"
                   autoComplete="name"
-                  className={`w-full px-3 py-2.5 rounded-lg border ${
+                  className={`w-full px-3 py-2 md:py-2.5 rounded-lg border ${
                     errors.full_name ? 'border-red-300' : 'border-gray-300'
                   } focus:outline-none focus:ring-2 focus:ring-[#00AA6C] focus:border-transparent text-gray-900 text-sm`}
                   {...register('full_name')}
@@ -260,7 +253,7 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   autoComplete="email"
-                  className={`w-full px-3 py-2.5 rounded-lg border ${
+                  className={`w-full px-3 py-2 md:py-2.5 rounded-lg border ${
                     errors.email ? 'border-red-300' : 'border-gray-300'
                   } focus:outline-none focus:ring-2 focus:ring-[#00AA6C] focus:border-transparent text-gray-900 text-sm`}
                   {...register('email')}
@@ -280,7 +273,7 @@ export default function RegisterPage() {
                   control={control}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger className={`w-full h-11 px-3 rounded-lg border ${
+                      <SelectTrigger className={`w-full h-9 md:h-11 px-3 rounded-lg border ${
                         errors.country ? 'border-red-300' : 'border-gray-300'
                       } focus:ring-2 focus:ring-[#00AA6C] bg-white text-sm`}>
                         <SelectValue placeholder="Select country" />
@@ -313,7 +306,7 @@ export default function RegisterPage() {
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
-                    className={`w-full px-3 py-2.5 pr-10 rounded-lg border ${
+                    className={`w-full px-3 py-2 md:py-2.5 pr-10 rounded-lg border ${
                       errors.password ? 'border-red-300' : 'border-gray-300'
                     } focus:outline-none focus:ring-2 focus:ring-[#00AA6C] focus:border-transparent text-gray-900 text-sm`}
                     {...register('password')}
@@ -335,14 +328,14 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-lg font-medium text-white bg-[#00AA6C] hover:bg-[#008f5a] focus:outline-none focus:ring-2 focus:ring-[#00AA6C] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="w-full py-2 md:py-2.5 px-4 rounded-lg font-medium text-white bg-[#00AA6C] hover:bg-[#008f5a] focus:outline-none focus:ring-2 focus:ring-[#00AA6C] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 {isLoading ? 'Creating account...' : 'Create account'}
               </button>
             </form>
 
             {/* Divider */}
-            <div className="relative my-6">
+            <div className="relative my-3 md:my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200" />
               </div>
@@ -356,7 +349,7 @@ export default function RegisterPage() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isGoogleLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 md:py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               {isGoogleLoading ? (
                 <div className="h-5 w-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
@@ -367,7 +360,7 @@ export default function RegisterPage() {
             </button>
 
             {/* Sign in link */}
-            <p className="mt-6 text-center text-sm text-gray-500">
+            <p className="mt-3 md:mt-6 text-center text-sm text-gray-500">
               Already have an account?{' '}
               <Link href={ROUTES.login} className="text-[#00AA6C] hover:text-[#008f5a] font-medium">
                 Sign in
@@ -380,11 +373,14 @@ export default function RegisterPage() {
         <div className="hidden lg:block lg:col-span-2" />
       </div>
 
-      {/* Footer */}
-      <div className="absolute bottom-6 left-[25%] z-20 flex items-center gap-6 text-sm text-white">
+      {/* Footer - hidden on mobile */}
+      <div className="absolute bottom-6 left-[25%] z-20 items-center gap-6 text-sm text-white hidden md:flex">
         <span>&copy; Gems</span>
         <Link href="/privacy" className="hover:text-white/80">Privacy & terms</Link>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }

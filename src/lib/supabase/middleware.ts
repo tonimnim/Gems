@@ -65,5 +65,25 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Owner-only routes - only users with 'owner' role can access
+  const ownerOnlyPaths = ['/dashboard', '/gems/new', '/gems/edit'];
+  const isOwnerOnlyPath = ownerOnlyPaths.some((path) =>
+    pathname.startsWith(path)
+  );
+
+  if (isOwnerOnlyPath && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || profile.role !== 'owner') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+  }
+
   return supabaseResponse;
 }

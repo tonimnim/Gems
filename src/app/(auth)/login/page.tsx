@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Gem } from 'lucide-react';
+import { BottomNav } from '@/components/mobile';
 import { createClient } from '@/lib/supabase/client';
 import { loginSchema, type LoginInput } from '@/lib/validations/auth';
 import { ROUTES } from '@/constants';
@@ -102,15 +103,22 @@ function LoginForm() {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+    <div className="w-full max-w-md bg-white rounded-xl shadow-xl border border-gray-100 p-5 md:p-8">
+      {/* Mobile logo */}
+      <div className="lg:hidden flex justify-center mb-3 md:mb-6">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-7 h-7 md:w-8 md:h-8 bg-[#00AA6C] rounded-lg flex items-center justify-center">
+            <Gem className="h-4 w-4 md:h-5 md:w-5 text-white" />
+          </div>
+          <span className="font-bold text-lg md:text-xl text-gray-900">Gems</span>
+        </Link>
+      </div>
+
       {/* Header */}
-      <div className="text-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
           Welcome back
         </h1>
-        <p className="text-gray-500 text-sm sm:text-base">
-          Sign in to continue to Gems
-        </p>
       </div>
 
       {/* Error message */}
@@ -120,62 +128,36 @@ function LoginForm() {
         </div>
       )}
 
-      {/* Google Sign In */}
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        disabled={isGoogleLoading}
-        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isGoogleLoading ? (
-          <div className="h-5 w-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-        ) : (
-          <GoogleIcon />
-        )}
-        <span>Continue with Google</span>
-      </button>
-
-      {/* Divider */}
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white text-gray-500">or</span>
-        </div>
-      </div>
-
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 md:space-y-4">
         {/* Email */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
             Email
           </label>
           <input
             id="email"
             type="email"
             autoComplete="email"
-            placeholder="you@example.com"
-            className={`w-full px-4 py-3 rounded-lg border ${
-              errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-[#00AA6C] focus:border-[#00AA6C]'
-            } outline-none focus:ring-2 transition-colors text-gray-900 placeholder-gray-400`}
+            className={`w-full px-3 py-2 md:py-2.5 rounded-lg border ${
+              errors.email ? 'border-red-300' : 'border-gray-300'
+            } focus:outline-none focus:ring-2 focus:ring-[#00AA6C] focus:border-transparent text-gray-900 text-sm`}
             {...register('email')}
           />
           {errors.email && (
-            <p className="mt-1.5 text-sm text-red-600">{errors.email.message}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
           )}
         </div>
 
         {/* Password */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-1">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Password
             </label>
             <Link
               href={ROUTES.forgotPassword}
-              className="text-sm text-[#00AA6C] hover:text-[#008f5a] font-medium"
+              className="text-xs md:text-sm text-[#00AA6C] hover:text-[#008f5a] font-medium"
             >
               Forgot password?
             </Link>
@@ -185,10 +167,9 @@ function LoginForm() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
-              placeholder="Enter your password"
-              className={`w-full px-4 py-3 pr-12 rounded-lg border ${
-                errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-[#00AA6C] focus:border-[#00AA6C]'
-              } outline-none focus:ring-2 transition-colors text-gray-900 placeholder-gray-400`}
+              className={`w-full px-3 py-2 md:py-2.5 pr-10 rounded-lg border ${
+                errors.password ? 'border-red-300' : 'border-gray-300'
+              } focus:outline-none focus:ring-2 focus:ring-[#00AA6C] focus:border-transparent text-gray-900 text-sm`}
               {...register('password')}
             />
             <button
@@ -196,15 +177,11 @@ function LoginForm() {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5" />
-              ) : (
-                <Eye className="h-5 w-5" />
-              )}
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
           {errors.password && (
-            <p className="mt-1.5 text-sm text-red-600">{errors.password.message}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
           )}
         </div>
 
@@ -212,26 +189,41 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-[#00AA6C] hover:bg-[#008f5a] focus:ring-2 focus:ring-[#00AA6C] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-2 md:py-2.5 px-4 rounded-lg font-medium text-white bg-[#00AA6C] hover:bg-[#008f5a] focus:outline-none focus:ring-2 focus:ring-[#00AA6C] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         >
-          {isLoading ? (
-            <div className="flex items-center justify-center gap-2">
-              <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Signing in...</span>
-            </div>
-          ) : (
-            'Sign in'
-          )}
+          {isLoading ? 'Signing in...' : 'Sign in'}
         </button>
       </form>
 
+      {/* Divider */}
+      <div className="relative my-4 md:my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="px-4 bg-white text-gray-500 uppercase">Or</span>
+        </div>
+      </div>
+
+      {/* Google Sign In */}
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        disabled={isGoogleLoading}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2 md:py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+      >
+        {isGoogleLoading ? (
+          <div className="h-5 w-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+        ) : (
+          <GoogleIcon />
+        )}
+        <span>Sign in with Google</span>
+      </button>
+
       {/* Sign up link */}
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p className="mt-4 md:mt-6 text-center text-sm text-gray-500">
         Don&apos;t have an account?{' '}
-        <Link
-          href={ROUTES.register}
-          className="text-[#00AA6C] hover:text-[#008f5a] font-semibold"
-        >
+        <Link href={ROUTES.register} className="text-[#00AA6C] hover:text-[#008f5a] font-medium">
           Sign up
         </Link>
       </p>
@@ -241,28 +233,102 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-[#092327] flex items-center justify-center p-4 relative">
-      {/* Back button for mobile */}
-      <Link
-        href="/m"
-        className="absolute top-4 left-4 w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors md:hidden"
-      >
-        <ArrowLeft className="h-5 w-5" />
-      </Link>
-      <div className="w-full max-w-md">
-        <Suspense fallback={
-          <div className="bg-white rounded-2xl shadow-2xl p-8 animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-2/3 mx-auto mb-4" />
-            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-8" />
-            <div className="h-12 bg-gray-200 rounded mb-6" />
-            <div className="h-12 bg-gray-200 rounded mb-4" />
-            <div className="h-12 bg-gray-200 rounded mb-4" />
-            <div className="h-12 bg-gray-200 rounded" />
-          </div>
-        }>
-          <LoginForm />
-        </Suspense>
+    <div className="h-screen bg-white relative overflow-hidden md:min-h-screen md:h-auto">
+      {/* Vertical dashed lines decoration */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute left-[8%] top-0 bottom-0 border-l border-dashed border-gray-200" />
+        <div className="absolute left-[25%] top-0 bottom-0 border-l border-dashed border-gray-200" />
+        <div className="absolute left-[50%] top-0 bottom-0 border-l border-dashed border-gray-200" />
+        <div className="absolute left-[75%] top-0 bottom-0 border-l border-dashed border-gray-200" />
+        <div className="absolute left-[92%] top-0 bottom-0 border-l border-dashed border-gray-200" />
       </div>
+
+      {/* Diagonal gradient at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-72 overflow-hidden">
+        <div
+          className="absolute -left-10 -right-10 top-0 bottom-0 transform -skew-y-6 translate-y-24"
+          style={{
+            background: 'linear-gradient(90deg, #092327 0%, #11292E 25%, #00AA6C 50%, #34E0A1 75%, #00AA6C 100%)',
+          }}
+        />
+      </div>
+
+      {/* Main content */}
+      <div className="relative z-10 min-h-screen grid grid-cols-12 gap-4 px-4">
+        {/* Col 1 - empty spacer */}
+        <div className="hidden lg:block lg:col-span-2" />
+
+        {/* Col 2 - Marketing content */}
+        <div className="hidden lg:flex lg:col-span-4 flex-col pt-8 pb-12">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-[#00AA6C] rounded-lg flex items-center justify-center">
+              <Gem className="h-5 w-5 text-white" />
+            </div>
+            <span className="font-bold text-xl text-gray-900">Gems</span>
+          </Link>
+
+          {/* Benefits */}
+          <div className="space-y-8 mt-32">
+            <div className="flex gap-4">
+              <div className="w-1 bg-[#00AA6C] rounded-full flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Discover hidden gems</h3>
+                <p className="text-gray-600 text-sm">
+                  Find unique places and experiences across Africa that you won&apos;t find anywhere else.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="w-1 bg-[#00AA6C] rounded-full flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Save your favorites</h3>
+                <p className="text-gray-600 text-sm">
+                  Bookmark gems you want to visit and access them anytime from your profile.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="w-1 bg-[#00AA6C] rounded-full flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Share your experiences</h3>
+                <p className="text-gray-600 text-sm">
+                  Rate and review places you&apos;ve visited to help other travelers.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Col 3 - Form */}
+        <div className="col-span-12 lg:col-span-4 flex items-center md:items-start justify-center pt-4 md:pt-16 lg:pt-24 pb-20 md:pb-8">
+          <Suspense fallback={
+            <div className="w-full max-w-md bg-white rounded-xl shadow-xl border border-gray-100 p-8 animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-2/3 mb-6" />
+              <div className="h-12 bg-gray-200 rounded mb-4" />
+              <div className="h-12 bg-gray-200 rounded mb-4" />
+              <div className="h-12 bg-gray-200 rounded mb-6" />
+              <div className="h-12 bg-gray-200 rounded" />
+            </div>
+          }>
+            <LoginForm />
+          </Suspense>
+        </div>
+
+        {/* Col 4 - empty spacer */}
+        <div className="hidden lg:block lg:col-span-2" />
+      </div>
+
+      {/* Footer - hidden on mobile */}
+      <div className="absolute bottom-6 left-[25%] z-20 items-center gap-6 text-sm text-white hidden md:flex">
+        <span>&copy; Gems</span>
+        <Link href="/privacy" className="hover:text-white/80">Privacy & terms</Link>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }

@@ -193,7 +193,7 @@ export default function HomePage() {
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <section className="pt-16 md:pt-20 pb-16 px-4">
+      <section className="pt-16 md:pt-20 pb-6 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1A1A1A] mb-6">
             Find your next gem..
