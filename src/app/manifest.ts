@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Discover amazing hidden gems across Africa - restaurants, nature spots, cultural sites, and more',
     start_url: '/',
     display: 'standalone',
-    background_color: '#FEFAE0',
-    theme_color: '#E85D04',
+    background_color: '#ffffff',
+    theme_color: '#00AA6C',
     orientation: 'portrait-primary',
     categories: ['travel', 'lifestyle', 'food'],
     icons: [
@@ -65,20 +65,6 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
-      },
-    ],
-    screenshots: [
-      {
-        src: '/images/screenshot-mobile.png',
-        sizes: '390x844',
-        type: 'image/png',
-        form_factor: 'narrow',
-      },
-      {
-        src: '/images/screenshot-desktop.png',
-        sizes: '1920x1080',
-        type: 'image/png',
-        form_factor: 'wide',
       },
     ],
   };
