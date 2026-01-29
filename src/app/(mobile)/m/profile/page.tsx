@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -14,6 +14,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { BecomeOwnerModal } from '@/components/become-owner-modal';
 
 interface MenuItemProps {
   href?: string;
@@ -66,6 +67,7 @@ function MenuItem({ href, icon: Icon, label, description, onClick, variant = 'de
 export default function ProfilePage() {
   const router = useRouter();
   const { user, isLoading, isAuthenticated, signOut } = useAuth();
+  const [showBecomeOwnerModal, setShowBecomeOwnerModal] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Quick Action - Only show for owners */}
+      {/* Quick Action for owners */}
       {user.role === 'owner' && (
         <div className="px-4 py-4">
           <Link
@@ -142,22 +144,37 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Menu Sections */}
-      <div className="bg-white border-t border-b border-gray-100">
-        <MenuItem
-          href="/dashboard"
-          icon={Gem}
-          label="My Gems"
-          description="Manage your listings"
-        />
-        <div className="h-px bg-gray-100 ml-[72px]" />
-        <MenuItem
-          href="/payments"
-          icon={CreditCard}
-          label="Payments"
-          description="Billing & transactions"
-        />
-      </div>
+      {/* Add My Gem button for visitors - opens upgrade modal */}
+      {user.role !== 'owner' && (
+        <div className="px-4 py-4">
+          <button
+            onClick={() => setShowBecomeOwnerModal(true)}
+            className="flex items-center justify-center gap-2 w-full py-3 bg-[#00AA6C] text-white font-medium rounded-xl touch-feedback"
+          >
+            <Plus className="h-5 w-5" />
+            Add My Gem
+          </button>
+        </div>
+      )}
+
+      {/* Menu Sections - My Gems & Payments only for owners */}
+      {user.role === 'owner' && (
+        <div className="bg-white border-t border-b border-gray-100">
+          <MenuItem
+            href="/dashboard"
+            icon={Gem}
+            label="My Gems"
+            description="Manage your listings"
+          />
+          <div className="h-px bg-gray-100 ml-[72px]" />
+          <MenuItem
+            href="/payments"
+            icon={CreditCard}
+            label="Payments"
+            description="Billing & transactions"
+          />
+        </div>
+      )}
 
       <div className="h-3" />
 
@@ -190,6 +207,12 @@ export default function ProfilePage() {
       <div className="px-4 py-6 text-center">
         <p className="text-xs text-gray-400">Gems v1.0.0</p>
       </div>
+
+      {/* Become Owner Modal */}
+      <BecomeOwnerModal
+        open={showBecomeOwnerModal}
+        onClose={() => setShowBecomeOwnerModal(false)}
+      />
     </div>
   );
 }
