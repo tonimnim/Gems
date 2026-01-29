@@ -57,6 +57,14 @@ function MenuItem({ href, icon: Icon, label, description, onClick, variant = 'de
   }
 
   if (href) {
+    // External links (WhatsApp, etc.)
+    if (href.startsWith('http')) {
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          {content}
+        </a>
+      );
+    }
     return <Link href={href}>{content}</Link>;
   }
 
@@ -179,9 +187,10 @@ export default function ProfilePage() {
 
       <div className="bg-white border-t border-b border-gray-100">
         <MenuItem
-          href="/help"
+          href="https://wa.me/254705708643"
           icon={HelpCircle}
           label="Help & Support"
+          description="Chat with us on WhatsApp"
         />
       </div>
 
