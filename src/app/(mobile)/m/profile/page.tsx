@@ -7,7 +7,6 @@ import {
   User,
   Gem,
   CreditCard,
-  Settings,
   HelpCircle,
   LogOut,
   ChevronRight,
@@ -179,12 +178,6 @@ export default function ProfilePage() {
       <div className="h-3" />
 
       <div className="bg-white border-t border-b border-gray-100">
-        <MenuItem
-          href="/m/settings"
-          icon={Settings}
-          label="Settings"
-        />
-        <div className="h-px bg-gray-100 ml-[72px]" />
         <MenuItem
           href="/help"
           icon={HelpCircle}
