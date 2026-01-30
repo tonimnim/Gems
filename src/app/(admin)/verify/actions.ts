@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { FREE_TRIAL } from '@/constants';
 
 export async function approveGem(gemId: string) {
   const supabase = await createClient();
@@ -18,13 +19,19 @@ export async function approveGem(gemId: string) {
     return { success: false, error: 'Gem not found' };
   }
 
-  // Update gem status
+  // Calculate trial end date if free trial is enabled
+  const trialEndDate = FREE_TRIAL.enabled
+    ? new Date(Date.now() + FREE_TRIAL.days * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+
+  // Update gem status (and set trial period if enabled)
   const { error } = await supabase
     .from('gems')
     .update({
       status: 'approved',
       rejection_reason: null,
       updated_at: new Date().toISOString(),
+      ...(trialEndDate && { current_term_end: trialEndDate }),
     })
     .eq('id', gemId);
 
@@ -33,18 +40,34 @@ export async function approveGem(gemId: string) {
     return { success: false, error: error.message };
   }
 
-  // Send notification to owner to complete payment
-  await supabase.from('notifications').insert({
-    user_id: gem.owner_id,
-    type: 'gem_approved',
-    title: 'Your Gem is Approved!',
-    message: `Great news! "${gem.name}" has been approved. Complete payment to make it visible to the public.`,
-    data: {
-      gem_id: gem.id,
-      gem_name: gem.name,
-      action_url: `/gems/${gem.id}/pay`,
-    },
-  });
+  // Send notification to owner
+  if (FREE_TRIAL.enabled) {
+    // Free trial notification - gem is live immediately
+    await supabase.from('notifications').insert({
+      user_id: gem.owner_id,
+      type: 'gem_approved',
+      title: 'Your Gem is Now Live!',
+      message: `Great news! "${gem.name}" has been approved and is now visible to the public. You have a ${FREE_TRIAL.days}-day free trial.`,
+      data: {
+        gem_id: gem.id,
+        gem_name: gem.name,
+        action_url: `/gem/${gem.id}`,
+      },
+    });
+  } else {
+    // Payment required notification
+    await supabase.from('notifications').insert({
+      user_id: gem.owner_id,
+      type: 'gem_approved',
+      title: 'Your Gem is Approved!',
+      message: `Great news! "${gem.name}" has been approved. Complete payment to make it visible to the public.`,
+      data: {
+        gem_id: gem.id,
+        gem_name: gem.name,
+        action_url: `/gems/${gem.id}/pay`,
+      },
+    });
+  }
 
   revalidatePath('/admin/verify');
   return { success: true };

@@ -3,6 +3,14 @@ import { GemCategory } from '@/types';
 export const APP_NAME = 'Gems';
 export const APP_DESCRIPTION = 'Discover amazing hidden gems across Africa';
 
+// Free trial configuration
+// Set to true to enable free listings (bypasses payment requirement)
+// When enabled, approved gems get a free trial period
+export const FREE_TRIAL = {
+  enabled: true,
+  days: 30, // Free trial duration in days
+} as const;
+
 // Pricing in KES
 export const PRICING = {
   standard: {

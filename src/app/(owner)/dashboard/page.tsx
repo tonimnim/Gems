@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/chart';
 import { Area, AreaChart, XAxis, YAxis } from 'recharts';
 import { useAuth } from '@/context/auth-context';
-import { ROUTES, PRICING } from '@/constants';
+import { ROUTES, PRICING, FREE_TRIAL } from '@/constants';
 import { formatCurrency, daysUntilExpiry } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import type { Gem as GemType } from '@/types';
@@ -283,8 +283,10 @@ export default function DashboardPage() {
                 const daysLeft = gem.current_term_end ? daysUntilExpiry(gem.current_term_end) : null;
                 const isExpiringSoon = daysLeft !== null && daysLeft > 0 && daysLeft <= 30;
                 const isExpired = daysLeft !== null && daysLeft <= 0;
-                const needsPayment = gem.status === 'approved' && (!gem.current_term_end || isExpired);
+                // During free trial, don't require payment
+                const needsPayment = !FREE_TRIAL.enabled && gem.status === 'approved' && (!gem.current_term_end || isExpired);
                 const isLive = gem.status === 'approved' && gem.current_term_end && !isExpired;
+                const isFreeTrial = FREE_TRIAL.enabled && isLive;
 
                 return (
                   <div>
@@ -332,6 +334,11 @@ export default function DashboardPage() {
                               Live
                             </span>
                           )}
+                          {isFreeTrial && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                              Free Trial
+                            </span>
+                          )}
                           {gem.tier === 'featured' && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#00AA6C]/10 text-[#00AA6C]">
                               Featured
@@ -344,7 +351,11 @@ export default function DashboardPage() {
                         {isExpiringSoon && isLive && (
                           <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
                             <Clock className="h-3 w-3" />
-                            <span>Expires in {daysLeft} days - <Link href={`/gems/${gem.id}/pay`} className="underline">Renew now</Link></span>
+                            {isFreeTrial ? (
+                              <span>Free trial ends in {daysLeft} days</span>
+                            ) : (
+                              <span>Expires in {daysLeft} days - <Link href={`/gems/${gem.id}/pay`} className="underline">Renew now</Link></span>
+                            )}
                           </div>
                         )}
                         {gem.status === 'pending' && (
