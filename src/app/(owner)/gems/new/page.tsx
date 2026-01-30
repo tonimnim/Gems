@@ -194,10 +194,9 @@ export default function NewGemPage() {
         const mediaInserts = images.map((img, index) => ({
           gem_id: gem.id,
           url: img.url,
-          public_id: img.publicId,
           type: 'image',
           is_cover: img.isCover,
-          order: index,
+          sort_order: index,
         }));
 
         await supabase.from('gem_media').insert(mediaInserts);

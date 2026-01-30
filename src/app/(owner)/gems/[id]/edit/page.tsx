@@ -126,7 +126,7 @@ export default function EditGemPage() {
           .from('gems')
           .select(`
             *,
-            media:gem_media(id, url, public_id, is_cover, order)
+            media:gem_media(id, url, is_cover, type, sort_order)
           `)
           .eq('id', gemId)
           .single();
@@ -163,13 +163,14 @@ export default function EditGemPage() {
           website: gem.website || '',
         });
 
-        // Convert existing media to UploadedImage format, sorted by order
-        const sortedMedia = (gem.media || []).sort((a: { order?: number }, b: { order?: number }) =>
-          (a.order ?? 0) - (b.order ?? 0)
+        // Convert existing media to UploadedImage format, sorted by sort_order
+        const sortedMedia = [...(gem.media || [])].sort(
+          (a: { sort_order?: number }, b: { sort_order?: number }) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0)
         );
-        const existingMedia = sortedMedia.map((m: { id: string; url: string; public_id?: string; is_cover?: boolean }, idx: number) => ({
+        const existingMedia = sortedMedia.map((m: { id: string; url: string; is_cover?: boolean }, idx: number) => ({
           id: m.id,
-          publicId: m.public_id || m.id,
+          publicId: m.id,
           url: m.url,
           isCover: m.is_cover ?? idx === 0,
         }));
@@ -275,10 +276,9 @@ export default function EditGemPage() {
         const mediaInserts = images.map((img, index) => ({
           gem_id: gemId,
           url: img.url,
-          public_id: img.publicId,
           type: 'image',
           is_cover: img.isCover,
-          order: index,
+          sort_order: index,
         }));
 
         await supabase.from('gem_media').insert(mediaInserts);
