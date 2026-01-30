@@ -35,7 +35,10 @@ export default function SearchPage() {
         const supabase = createClient();
         let searchQuery = supabase
           .from('gems')
-          .select('id, name, category, city, country, average_rating, ratings_count, tier')
+          .select(`
+            id, name, category, city, country, average_rating, ratings_count, tier,
+            media:gem_media(url, is_cover)
+          `)
           .eq('status', 'approved')
           .or(`name.ilike.%${query}%,city.ilike.%${query}%,description.ilike.%${query}%`)
           .order('ratings_count', { ascending: false })
@@ -52,16 +55,21 @@ export default function SearchPage() {
           console.error('Search error:', error);
           setSearchResults([]);
         } else {
-          const gemCards: GemCardData[] = (data || []).map((gem) => ({
-            id: gem.id,
-            name: gem.name,
-            category: gem.category,
-            city: gem.city,
-            country: gem.country,
-            average_rating: gem.average_rating,
-            ratings_count: gem.ratings_count,
-            tier: gem.tier,
-          }));
+          const gemCards: GemCardData[] = (data || []).map((gem) => {
+            const media = gem.media as { url: string; is_cover: boolean }[] | undefined;
+            const coverImage = media?.find((m) => m.is_cover)?.url || media?.[0]?.url;
+            return {
+              id: gem.id,
+              name: gem.name,
+              category: gem.category,
+              city: gem.city,
+              country: gem.country,
+              average_rating: gem.average_rating,
+              ratings_count: gem.ratings_count,
+              tier: gem.tier,
+              cover_image: coverImage,
+            };
+          });
           setSearchResults(gemCards);
         }
       } catch (error) {
