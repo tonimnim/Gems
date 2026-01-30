@@ -126,7 +126,7 @@ export default function EditGemPage() {
           .from('gems')
           .select(`
             *,
-            media:gem_media(id, url)
+            media:gem_media(id, url, public_id, is_cover, order)
           `)
           .eq('id', gemId)
           .single();
@@ -156,12 +156,15 @@ export default function EditGemPage() {
           website: gem.website || '',
         });
 
-        // Convert existing media to UploadedImage format
-        const existingMedia = (gem.media || []).map((m: { id: string; url: string; public_id?: string; is_cover?: boolean }, idx: number) => ({
+        // Convert existing media to UploadedImage format, sorted by order
+        const sortedMedia = (gem.media || []).sort((a: { order?: number }, b: { order?: number }) =>
+          (a.order ?? 0) - (b.order ?? 0)
+        );
+        const existingMedia = sortedMedia.map((m: { id: string; url: string; public_id?: string; is_cover?: boolean }, idx: number) => ({
           id: m.id,
           publicId: m.public_id || m.id,
           url: m.url,
-          isCover: m.is_cover || idx === 0,
+          isCover: m.is_cover ?? idx === 0,
         }));
         setImages(existingMedia);
       } catch (err) {
