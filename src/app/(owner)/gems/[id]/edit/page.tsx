@@ -95,7 +95,7 @@ export default function EditGemPage() {
   const router = useRouter();
   const params = useParams();
   const gemId = params.id as string;
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -131,13 +131,20 @@ export default function EditGemPage() {
           .eq('id', gemId)
           .single();
 
-        if (gemError || !gem) {
+        if (gemError) {
+          console.error('Error fetching gem:', gemError);
+          setError(`Failed to load gem: ${gemError.message}`);
+          return;
+        }
+
+        if (!gem) {
           setError('Gem not found');
           return;
         }
 
         // Check ownership
         if (gem.owner_id !== user?.id) {
+          console.error('Ownership mismatch:', { gemOwnerId: gem.owner_id, userId: user?.id });
           setError('You do not have permission to edit this gem');
           return;
         }
@@ -175,10 +182,16 @@ export default function EditGemPage() {
       }
     };
 
+    // Wait for auth to finish loading before fetching
+    if (authLoading) return;
+
     if (user?.id && gemId) {
       fetchGem();
+    } else if (!authLoading && !user) {
+      setError('Please log in to edit this gem');
+      setIsLoading(false);
     }
-  }, [gemId, user?.id]);
+  }, [gemId, user?.id, authLoading]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
