@@ -234,21 +234,45 @@ export default function DashboardPage() {
           icon={MessageSquare}
         />
 
-        {/* Listing Pricing - spans 2 columns */}
+        {/* Listing Info - spans 2 columns */}
         <Card className="border-0 bg-white shadow-sm lg:col-span-2">
           <CardContent className="p-5">
-            <h3 className="font-semibold text-[#092327]">Listing Pricing</h3>
-            <div className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Standard</span>
-                <span className="font-medium">{formatCurrency(PRICING.standard.per_term)}/term</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Featured</span>
-                <span className="font-medium">{formatCurrency(PRICING.featured.per_term)}/term</span>
-              </div>
-              <p className="text-xs text-gray-400 pt-1">1 term = 6 months</p>
-            </div>
+            {FREE_TRIAL.enabled && gem?.current_term_end ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-[#092327]">Free Trial</h3>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                    Active
+                  </span>
+                </div>
+                <div className="mt-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-[#00AA6C]">
+                      {Math.max(0, daysUntilExpiry(gem.current_term_end))}
+                    </span>
+                    <span className="text-gray-500">days remaining</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Your listing is free during the trial period. Enjoy!
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="font-semibold text-[#092327]">Listing Pricing</h3>
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Standard</span>
+                    <span className="font-medium">{formatCurrency(PRICING.standard.per_term)}/term</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Featured</span>
+                    <span className="font-medium">{formatCurrency(PRICING.featured.per_term)}/term</span>
+                  </div>
+                  <p className="text-xs text-gray-400 pt-1">1 term = 6 months</p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
