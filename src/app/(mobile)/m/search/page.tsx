@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Search, X, TrendingUp, Loader2 } from 'lucide-react';
 import { useSavedGems } from '@/hooks/useSavedGems';
 import { createClient } from '@/lib/supabase/client';
+import { FREE_TRIAL } from '@/constants';
 import { GemCard, GemCardSkeleton, type GemCardData } from '@/components/mobile';
 import { cn } from '@/lib/utils';
 const trendingSearches = [
@@ -32,14 +33,20 @@ export default function SearchPage() {
       setIsSearching(true);
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
+        let searchQuery = supabase
           .from('gems')
           .select('id, name, category, city, country, average_rating, ratings_count, tier')
           .eq('status', 'approved')
-          .gt('current_term_end', new Date().toISOString())
           .or(`name.ilike.%${query}%,city.ilike.%${query}%,description.ilike.%${query}%`)
           .order('ratings_count', { ascending: false })
           .limit(20);
+
+        // During free trial, show all approved gems
+        if (!FREE_TRIAL.enabled) {
+          searchQuery = searchQuery.gt('current_term_end', new Date().toISOString());
+        }
+
+        const { data, error } = await searchQuery;
 
         if (error) {
           console.error('Search error:', error);

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MapPin, Bell, Search, Loader2 } from 'lucide-react';
 import { useSavedGems } from '@/hooks/useSavedGems';
 import { createClient } from '@/lib/supabase/client';
+import { FREE_TRIAL } from '@/constants';
 import {
   GemCard,
   GemCardSkeleton,
@@ -30,10 +31,15 @@ export default function MobileHomePage() {
         .from('gems')
         .select('id, name, category, city, country, average_rating, ratings_count, tier')
         .eq('status', 'approved')
-        .gt('current_term_end', new Date().toISOString())
         .order('tier', { ascending: false })
         .order('ratings_count', { ascending: false })
         .limit(20);
+
+      // During free trial, show all approved gems
+      // Otherwise, only show gems with valid subscription
+      if (!FREE_TRIAL.enabled) {
+        query = query.gt('current_term_end', new Date().toISOString());
+      }
 
       if (selectedCategory) {
         query = query.eq('category', selectedCategory);
