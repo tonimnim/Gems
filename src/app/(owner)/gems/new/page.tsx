@@ -196,7 +196,7 @@ export default function NewGemPage() {
           url: img.url,
           type: 'image',
           is_cover: img.isCover,
-          sort_order: index,
+          order: index,
         }));
 
         await supabase.from('gem_media').insert(mediaInserts);
