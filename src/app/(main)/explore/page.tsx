@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { GemCard, CategoryFilter } from '@/components/gems';
-import { AFRICAN_COUNTRIES } from '@/constants';
+import { AFRICAN_COUNTRIES, FREE_TRIAL } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
 import type { Gem, GemCategory } from '@/types';
 
@@ -34,9 +34,14 @@ function ExploreContent() {
           media:gem_media(*)
         `)
         .eq('status', 'approved')
-        .gt('current_term_end', new Date().toISOString())
         .order('tier', { ascending: false })
         .order('created_at', { ascending: false });
+
+      // During free trial, show all approved gems
+      // Otherwise, only show gems with valid subscription
+      if (!FREE_TRIAL.enabled) {
+        query = query.gt('current_term_end', new Date().toISOString());
+      }
 
       if (selectedCategory) {
         query = query.eq('category', selectedCategory);

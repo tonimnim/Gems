@@ -9,7 +9,10 @@ export async function GET(
     const { id } = await params;
     const supabase = await createClient();
 
-    const { data: gem, error } = await supabase
+    // Check if id is a UUID or a slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    const query = supabase
       .from('gems')
       .select(
         `
@@ -24,9 +27,13 @@ export async function GET(
           user:users(id, full_name, avatar_url)
         )
       `
-      )
-      .eq('id', id)
-      .single();
+      );
+
+    // Query by ID or slug
+    const { data: gem, error } = await (isUUID
+      ? query.eq('id', id)
+      : query.eq('slug', id)
+    ).single();
 
     if (error || !gem) {
       return NextResponse.json({ error: 'Gem not found' }, { status: 404 });
