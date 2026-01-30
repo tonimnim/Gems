@@ -164,6 +164,7 @@ export default function EditGemPage() {
         });
 
         // Convert existing media to UploadedImage format, sorted by sort_order
+        console.log('Gem media from DB:', gem.media);
         const sortedMedia = [...(gem.media || [])].sort(
           (a: { sort_order?: number }, b: { sort_order?: number }) =>
             (a.sort_order ?? 0) - (b.sort_order ?? 0)
@@ -174,6 +175,7 @@ export default function EditGemPage() {
           url: m.url,
           isCover: m.is_cover ?? idx === 0,
         }));
+        console.log('Converted media:', existingMedia);
         setImages(existingMedia);
       } catch (err) {
         console.error('Error fetching gem:', err);
