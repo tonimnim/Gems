@@ -18,7 +18,7 @@ import {
 // Emails that can access the admin panel
 const ADMIN_EMAILS = [
   'anthonychege599@gmail.com',
-  'mr.styvoh@gmail.com', // Stephen Kamau - COO
+  'stephenkamau431@gmail.com', // Stephen Kamau - COO
 ];
 
 interface UserProfile {

@@ -18,7 +18,7 @@ const team = [
     bio: 'Operations and growth lead, ensuring Gems reaches every corner of Africa.',
     quote: 'Every hidden gem deserves to be discovered.',
     linkedin: '#',
-    email: 'stephen@gems.africa',
+    email: 'stephenkamau431@gmail.com',
   },
 ];
 
