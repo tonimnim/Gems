@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronDown,
   Bell,
+  PlusCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNotifications } from '@/context/notification-context';
@@ -34,6 +35,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { name: 'Dashboard', href: '/anthonychege599', icon: LayoutDashboard },
+  { name: 'Add Gem', href: '/anthonychege599/add-gem', icon: PlusCircle },
   { name: 'Notifications', href: '/anthonychege599/notifications', icon: Bell, badge: 0 },
   { name: 'Verify', href: '/anthonychege599/verify', icon: CheckCircle, badge: 0 },
   { name: 'Gems', href: '/anthonychege599/gems', icon: Gem },
