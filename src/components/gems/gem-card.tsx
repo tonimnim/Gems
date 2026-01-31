@@ -20,7 +20,7 @@ export function GemCard({ gem, isFavorite = false, onFavoriteToggle, className }
 
   return (
     <Link
-      href={ROUTES.gem(gem.id)}
+      href={`/gem/${gem.slug || gem.id}`}
       className={cn(
         'group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all',
         className

@@ -18,13 +18,13 @@ export async function GET(
         `
         *,
         media:gem_media(*),
-        owner:users(id, full_name, avatar_url),
+        owner:profiles(id, full_name, avatar_url),
         ratings(
           id,
           score,
           comment,
           created_at,
-          user:users(id, full_name, avatar_url)
+          user:profiles(id, full_name, avatar_url)
         )
       `
       );
