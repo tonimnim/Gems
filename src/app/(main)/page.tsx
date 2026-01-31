@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -24,6 +24,53 @@ import {
 import { GEM_CATEGORIES, ROUTES } from '@/constants';
 import { useLocation } from '@/context/location-context';
 import type { Gem } from '@/types';
+
+// Cache configuration
+const CACHE_KEY = 'gems_home_cache';
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+interface CachedData {
+  nearYou: Gem[];
+  featured: Gem[];
+  popular: Gem[];
+  locationKey: string;
+  timestamp: number;
+}
+
+function getCachedGems(locationKey: string): CachedData | null {
+  try {
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+
+    const data: CachedData = JSON.parse(cached);
+    const isExpired = Date.now() - data.timestamp > CACHE_TTL;
+    const isSameLocation = data.locationKey === locationKey;
+
+    if (isExpired || !isSameLocation) {
+      sessionStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedGems(nearYou: Gem[], featured: Gem[], popular: Gem[], locationKey: string) {
+  try {
+    const data: CachedData = {
+      nearYou,
+      featured,
+      popular,
+      locationKey,
+      timestamp: Date.now(),
+    };
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 interface GemWithDistance extends Gem {
   distance_km?: string;
@@ -94,9 +141,41 @@ export default function HomePage() {
     fetchIPLocation();
   }, [fetchIPLocation]);
 
+  // Build location key for cache
+  const getLocationKey = useCallback(() => {
+    if (location?.source === 'gps' && location.latitude && location.longitude) {
+      // Round coordinates to avoid cache misses from tiny GPS variations
+      const lat = Math.round(location.latitude * 100) / 100;
+      const lng = Math.round(location.longitude * 100) / 100;
+      return `gps:${lat},${lng}`;
+    }
+    return `ip:${location?.countryCode || 'unknown'}:${location?.city || 'unknown'}`;
+  }, [location?.source, location?.latitude, location?.longitude, location?.countryCode, location?.city]);
+
+  // Track if we've already fetched for current location
+  const lastFetchedLocationRef = useRef<string | null>(null);
+
   // Fetch gems when location changes
   useEffect(() => {
+    const locationKey = getLocationKey();
+
+    // Skip if we already fetched for this location
+    if (lastFetchedLocationRef.current === locationKey) {
+      return;
+    }
+
     async function fetchGems() {
+      // Check cache first
+      const cached = getCachedGems(locationKey);
+      if (cached) {
+        setNearYouGems(cached.nearYou);
+        setFeaturedGems(cached.featured);
+        setPopularGems(cached.popular);
+        setIsLoadingGems(false);
+        lastFetchedLocationRef.current = locationKey;
+        return;
+      }
+
       setIsLoadingGems(true);
       try {
         let nearYouUrl: string;
@@ -130,9 +209,17 @@ export default function HomePage() {
           popularRes.json(),
         ]);
 
-        setNearYouGems(nearYouData.data || []);
-        setFeaturedGems(featuredData.data || []);
-        setPopularGems(popularData.data || []);
+        const nearYou = nearYouData.data || [];
+        const featured = featuredData.data || [];
+        const popular = popularData.data || [];
+
+        setNearYouGems(nearYou);
+        setFeaturedGems(featured);
+        setPopularGems(popular);
+
+        // Cache the results
+        setCachedGems(nearYou, featured, popular, locationKey);
+        lastFetchedLocationRef.current = locationKey;
       } catch (error) {
         console.error('Error fetching gems:', error);
       } finally {
@@ -141,7 +228,7 @@ export default function HomePage() {
     }
 
     fetchGems();
-  }, [location?.countryCode, location?.city, location?.source, location?.latitude, location?.longitude]);
+  }, [location?.countryCode, location?.city, location?.source, location?.latitude, location?.longitude, getLocationKey]);
 
   // Auto-advance testimonials
   useEffect(() => {
