@@ -15,8 +15,11 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 
-// Only this email can access the admin panel
-const ADMIN_EMAIL = 'anthonychege599@gmail.com';
+// Emails that can access the admin panel
+const ADMIN_EMAILS = [
+  'anthonychege599@gmail.com',
+  'mr.styvoh@gmail.com', // Stephen Kamau - COO
+];
 
 interface UserProfile {
   id: string;
@@ -56,9 +59,10 @@ export default function AdminLayout({
         return;
       }
 
-      // Check if user email matches admin email (case-insensitive)
+      // Check if user email is in admin list (case-insensitive)
       const userEmail = user.email?.toLowerCase();
-      if (!userEmail || userEmail !== ADMIN_EMAIL.toLowerCase()) {
+      const isAdmin = userEmail && ADMIN_EMAILS.some(email => email.toLowerCase() === userEmail);
+      if (!isAdmin) {
         router.push('/');
         return;
       }
