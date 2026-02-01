@@ -50,6 +50,8 @@ export interface Gem {
   phone?: string;
   email?: string;
   website?: string;
+  instagram?: string;
+  tiktok?: string;
   opening_hours?: string;
   price_range?: string;
   status: GemStatus;

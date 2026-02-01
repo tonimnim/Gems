@@ -104,6 +104,7 @@ interface FormData {
   email: string;
   website: string;
   instagram: string;
+  tiktok: string;
   facebook: string;
   twitter: string;
   // Operations
@@ -143,6 +144,7 @@ export default function AddGemPage() {
     email: '',
     website: '',
     instagram: '',
+    tiktok: '',
     facebook: '',
     twitter: '',
     // Operations
@@ -198,6 +200,7 @@ export default function AddGemPage() {
       email: '',
       website: '',
       instagram: '',
+      tiktok: '',
       facebook: '',
       twitter: '',
       openingHours: '',
@@ -278,6 +281,8 @@ Owner: ${formData.ownerName}${formData.ownerPhone ? ` | Phone: ${formData.ownerP
           phone: formData.phone || formData.whatsapp || null,
           email: formData.email || null,
           website: formData.website || null,
+          instagram: formData.instagram || null,
+          tiktok: formData.tiktok || null,
           opening_hours: formData.openingHours || null,
           price_range: formData.priceRange || null,
           status: formData.isVerified ? 'approved' : 'pending',
@@ -628,32 +633,23 @@ Owner: ${formData.ownerName}${formData.ownerPhone ? ` | Phone: ${formData.ownerP
 
           <div className="border-t pt-4 mt-4">
             <p className="text-sm font-medium text-gray-700 mb-3">Social Media Links</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Instagram</label>
                 <Input
                   name="instagram"
                   value={formData.instagram}
                   onChange={handleInputChange}
-                  placeholder="@username or URL"
+                  placeholder="@username or full URL"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">Facebook</label>
+                <label className="block text-sm text-gray-500 mb-1">TikTok</label>
                 <Input
-                  name="facebook"
-                  value={formData.facebook}
+                  name="tiktok"
+                  value={formData.tiktok}
                   onChange={handleInputChange}
-                  placeholder="Page name or URL"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Twitter/X</label>
-                <Input
-                  name="twitter"
-                  value={formData.twitter}
-                  onChange={handleInputChange}
-                  placeholder="@username or URL"
+                  placeholder="@username or full URL"
                 />
               </div>
             </div>
