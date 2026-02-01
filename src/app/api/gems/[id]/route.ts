@@ -64,10 +64,11 @@ export async function GET(
     }
 
     // Increment view count (don't await to avoid blocking response)
+    // Use gem.id (UUID) not id (which could be slug)
     supabase
       .from('gems')
       .update({ views_count: gem.views_count + 1 })
-      .eq('id', id)
+      .eq('id', gem.id)
       .then(() => {});
 
     return NextResponse.json({ data: gem });
