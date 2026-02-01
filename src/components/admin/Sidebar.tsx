@@ -8,7 +8,6 @@ import {
   Gem,
   Users,
   CreditCard,
-  Settings,
   LogOut,
   ChevronDown,
   Bell,
@@ -22,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
@@ -41,7 +39,6 @@ const NAV_ITEMS: NavItem[] = [
   { name: 'Gems', href: '/anthonychege599/gems', icon: Gem },
   { name: 'Users', href: '/anthonychege599/users', icon: Users },
   { name: 'Payments', href: '/anthonychege599/payments', icon: CreditCard },
-  { name: 'Settings', href: '/anthonychege599/settings', icon: Settings },
 ];
 
 interface UserProfile {
@@ -160,13 +157,6 @@ export function Sidebar({ profile, pendingCount = 0 }: SidebarProps) {
             <ChevronDown className="h-4 w-4 text-white/50" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem asChild>
-              <Link href="/anthonychege599/settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleSignOut}
               className="text-red-600 focus:text-red-600"

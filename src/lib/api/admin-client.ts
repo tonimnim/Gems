@@ -261,20 +261,30 @@ export async function updateGem(
   return { success: true };
 }
 
-// Delete a gem
+// Delete a gem (admin only - uses secure database function)
 export async function deleteGem(id: string): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient();
 
-  // Delete related data first
-  await supabase.from('gem_media').delete().eq('gem_id', id);
-  await supabase.from('ratings').delete().eq('gem_id', id);
-  await supabase.from('favorites').delete().eq('gem_id', id);
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'Not authenticated' };
+  }
 
-  const { error } = await supabase.from('gems').delete().eq('id', id);
+  // Use secure RPC function that bypasses RLS for admins
+  const { data, error } = await supabase.rpc('admin_delete_gem', {
+    gem_id: id,
+    user_id: user.id,
+  });
 
   if (error) {
     console.error('Error deleting gem:', error);
     return { success: false, error: error.message };
+  }
+
+  // The function returns { success: boolean, error?: string }
+  if (data && typeof data === 'object' && 'success' in data) {
+    return data as { success: boolean; error?: string };
   }
 
   return { success: true };
