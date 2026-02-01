@@ -63,13 +63,11 @@ export async function GET(
       }
     }
 
-    // Increment view count (don't await to avoid blocking response)
-    // Use gem.id (UUID) not id (which could be slug)
-    supabase
-      .from('gems')
-      .update({ views_count: gem.views_count + 1 })
-      .eq('id', gem.id)
-      .then(() => {});
+    // Increment view count using secure database function (bypasses RLS)
+    // Fire and forget - don't block response
+    supabase.rpc('increment_gem_views', { gem_id: gem.id }).then(({ error }) => {
+      if (error) console.error('Failed to increment views:', error.message);
+    });
 
     return NextResponse.json({ data: gem });
   } catch (error) {
