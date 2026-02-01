@@ -1,25 +1,55 @@
 'use client';
 
-import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2, MapPin } from 'lucide-react';
 import { GemCard, CategoryFilter } from '@/components/gems';
 import { AFRICAN_COUNTRIES, FREE_TRIAL } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
+import { useLocation } from '@/context/location-context';
 import type { Gem, GemCategory } from '@/types';
 
 function ExploreContent() {
   const searchParams = useSearchParams();
+  const { location, isLoading: locationLoading, fetchIPLocation } = useLocation();
+
   const [gems, setGems] = useState<Gem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<GemCategory | null>(
     (searchParams.get('category') as GemCategory) || null
   );
+  // Initialize from URL param, will be auto-set from location if empty
   const [selectedCountry, setSelectedCountry] = useState<string>(
     searchParams.get('country') || ''
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  // Track if we've already auto-set country from location
+  const hasAutoSetCountryRef = useRef(false);
+
+  // Fetch IP location on mount
+  useEffect(() => {
+    fetchIPLocation();
+  }, [fetchIPLocation]);
+
+  // Auto-set country from detected location (only once, if no URL param)
+  useEffect(() => {
+    // Skip if: already auto-set, URL has country param, or no location detected yet
+    if (hasAutoSetCountryRef.current) return;
+    if (searchParams.get('country')) return;
+    if (!location?.countryCode) return;
+
+    // Find matching country in AFRICAN_COUNTRIES
+    const matchedCountry = AFRICAN_COUNTRIES.find(
+      (c) => c.code === location.countryCode
+    );
+
+    if (matchedCountry) {
+      setSelectedCountry(matchedCountry.code);
+      hasAutoSetCountryRef.current = true;
+    }
+  }, [location?.countryCode, searchParams]);
 
   // Fetch gems from database
   const fetchGems = useCallback(async () => {
@@ -87,6 +117,11 @@ function ExploreContent() {
     });
   };
 
+  // Get country name for display
+  const selectedCountryName = selectedCountry
+    ? AFRICAN_COUNTRIES.find((c) => c.code === selectedCountry)?.name
+    : null;
+
   const countryOptions = [
     { value: '', label: 'All Countries' },
     ...AFRICAN_COUNTRIES.map((c) => ({ value: c.code, label: c.name })),
@@ -98,10 +133,22 @@ function ExploreContent() {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#1A1A1A]">
-            Explore Gems
+            {selectedCountryName ? `Gems in ${selectedCountryName}` : 'Explore Gems'}
           </h1>
-          <p className="mt-2 text-gray-600">
-            Discover amazing hidden places across Africa
+          <p className="mt-2 text-gray-600 flex items-center gap-1">
+            {locationLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Detecting your location...
+              </>
+            ) : selectedCountryName ? (
+              <>
+                <MapPin className="h-4 w-4" />
+                Showing gems in your area. Change country below to explore elsewhere.
+              </>
+            ) : (
+              'Discover amazing hidden places across Africa'
+            )}
           </p>
         </div>
 

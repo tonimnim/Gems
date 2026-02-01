@@ -179,6 +179,7 @@ export default function HomePage() {
       setIsLoadingGems(true);
       try {
         let nearYouUrl: string;
+        const countryCode = location?.countryCode;
 
         // Use GPS coordinates if available, otherwise fall back to country/city
         if (location?.source === 'gps' && location.latitude && location.longitude) {
@@ -187,8 +188,8 @@ export default function HomePage() {
         } else {
           // Fall back to country/city filtering
           const nearYouParams = new URLSearchParams({ limit: '4' });
-          if (location?.countryCode) {
-            nearYouParams.set('country', location.countryCode);
+          if (countryCode) {
+            nearYouParams.set('country', countryCode);
           }
           if (location?.city) {
             nearYouParams.set('city', location.city);
@@ -196,11 +197,16 @@ export default function HomePage() {
           nearYouUrl = `/api/gems?${nearYouParams.toString()}`;
         }
 
+        // Build URLs with country filter for all sections
+        const countryParam = countryCode ? `&country=${countryCode}` : '';
+        const featuredUrl = `/api/gems?tier=featured&limit=4${countryParam}`;
+        const popularUrl = `/api/gems?limit=4${countryParam}`;
+
         // Fetch all gem types in parallel
         const [nearYouRes, featuredRes, popularRes] = await Promise.all([
           fetch(nearYouUrl),
-          fetch('/api/gems?tier=featured&limit=4'),
-          fetch('/api/gems?limit=4'),
+          fetch(featuredUrl),
+          fetch(popularUrl),
         ]);
 
         const [nearYouData, featuredData, popularData] = await Promise.all([

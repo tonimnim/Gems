@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { SlidersHorizontal, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { SlidersHorizontal, Loader2, MapPin } from 'lucide-react';
 import { useSavedGems } from '@/hooks/useSavedGems';
+import { useLocation } from '@/context/location-context';
 import { createClient } from '@/lib/supabase/client';
-import { FREE_TRIAL } from '@/constants';
+import { FREE_TRIAL, AFRICAN_COUNTRIES } from '@/constants';
 import {
   GemCard,
   GemCardSkeleton,
@@ -18,6 +19,20 @@ export default function ExplorePage() {
   const [gems, setGems] = useState<GemCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toggleSave, isSaved } = useSavedGems();
+
+  // Location context
+  const { location, isLoading: locationLoading, fetchIPLocation } = useLocation();
+  const hasAutoFilteredRef = useRef(false);
+
+  // Fetch IP location on mount
+  useEffect(() => {
+    fetchIPLocation();
+  }, [fetchIPLocation]);
+
+  // Get country name for display
+  const countryName = location?.countryCode
+    ? AFRICAN_COUNTRIES.find((c) => c.code === location.countryCode)?.name || location.country
+    : null;
 
   const fetchGems = useCallback(async () => {
     setIsLoading(true);
@@ -39,6 +54,11 @@ export default function ExplorePage() {
       // Otherwise, only show gems with valid subscription
       if (!FREE_TRIAL.enabled) {
         query = query.gt('current_term_end', new Date().toISOString());
+      }
+
+      // Filter by user's country
+      if (location?.countryCode) {
+        query = query.eq('country', location.countryCode);
       }
 
       if (selectedCategory) {
@@ -74,19 +94,38 @@ export default function ExplorePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, location?.countryCode]);
 
   useEffect(() => {
-    fetchGems();
-  }, [fetchGems]);
+    // Only fetch when location is detected or category changes
+    if (location?.countryCode || hasAutoFilteredRef.current) {
+      fetchGems();
+      hasAutoFilteredRef.current = true;
+    }
+  }, [fetchGems, location?.countryCode]);
 
   return (
     <div className="min-h-screen bg-gray-50/80">
       {/* Header */}
       <header className="bg-white pt-safe sticky top-0 z-40 border-b border-gray-100">
         <div className="px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-gray-900">Explore</h1>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                {countryName ? `Explore ${countryName}` : 'Explore'}
+              </h1>
+              {locationLoading ? (
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Detecting location...
+                </p>
+              ) : countryName ? (
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Showing gems in your area
+                </p>
+              ) : null}
+            </div>
             <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center touch-feedback">
               <SlidersHorizontal className="h-5 w-5 text-gray-600" />
             </button>

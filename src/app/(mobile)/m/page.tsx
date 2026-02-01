@@ -147,19 +147,22 @@ export default function MobileHomePage() {
       try {
         // Build URLs based on location type
         let nearYouUrl: string;
+        const countryCode = location?.countryCode;
+
         if (location?.source === 'gps' && location.latitude && location.longitude) {
           nearYouUrl = `/api/gems/nearby?lat=${location.latitude}&lng=${location.longitude}&radius=50000&limit=6`;
         } else {
           const params = new URLSearchParams({ limit: '6' });
-          if (location?.countryCode) params.set('country', location.countryCode);
+          if (countryCode) params.set('country', countryCode);
           if (location?.city) params.set('city', location.city);
           nearYouUrl = `/api/gems?${params.toString()}`;
         }
 
-        // Add category filter if selected
+        // Build params: always filter by country, optionally by category
+        const countryParam = countryCode ? `&country=${countryCode}` : '';
         const categoryParam = selectedCategory ? `&category=${selectedCategory}` : '';
-        const featuredUrl = `/api/gems?tier=featured&limit=6${categoryParam}`;
-        const popularUrl = `/api/gems?limit=8${categoryParam}`;
+        const featuredUrl = `/api/gems?tier=featured&limit=6${countryParam}${categoryParam}`;
+        const popularUrl = `/api/gems?limit=8${countryParam}${categoryParam}`;
 
         // Fetch all in parallel
         const [nearYouRes, featuredRes, popularRes] = await Promise.all([
