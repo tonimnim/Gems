@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,7 @@ import {
   Eye,
   Navigation,
   Loader2,
+  CheckCircle,
 } from 'lucide-react';
 import { Button, StarRating, Avatar, AvatarImage, AvatarFallback, Textarea } from '@/components/ui';
 import { GEM_CATEGORIES, ROUTES } from '@/constants';
@@ -46,10 +47,13 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuLoading, setMenuLoading] = useState(false);
   const [ratings, setRatings] = useState<Rating[]>([]);
-  const [ratingsLoading, setRatingsLoading] = useState(true);
+  const [ratingsLoading, setRatingsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [userHasReviewed, setUserHasReviewed] = useState(false);
+  const [userReview, setUserReview] = useState<Rating | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Track if ratings have been fetched to prevent re-fetching
+  const ratingsLoadedForGemRef = useRef<string | null>(null);
 
   // Fetch gem data
   useEffect(() => {
@@ -78,10 +82,13 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
     fetchGem();
   }, [id]);
 
-  // Fetch ratings
+  // Fetch ratings - only when gem changes, not when user changes
   useEffect(() => {
     async function fetchRatings() {
       if (!gem) return;
+
+      // Prevent re-fetching if already loaded for this gem
+      if (ratingsLoadedForGemRef.current === gem.id) return;
 
       setRatingsLoading(true);
       try {
@@ -89,10 +96,7 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
         const result = await response.json();
         if (result.data) {
           setRatings(result.data);
-          if (user) {
-            const hasReviewed = result.data.some((r: Rating) => r.user_id === user.id);
-            setUserHasReviewed(hasReviewed);
-          }
+          ratingsLoadedForGemRef.current = gem.id;
         }
       } catch (error) {
         console.error('Error fetching ratings:', error);
@@ -102,7 +106,43 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
     }
 
     fetchRatings();
-  }, [gem, user]);
+  }, [gem]);
+
+  // Find user's review when ratings or user changes
+  useEffect(() => {
+    if (user && ratings.length > 0) {
+      const existingReview = ratings.find((r) => r.user_id === user.id);
+      setUserReview(existingReview || null);
+    } else {
+      setUserReview(null);
+    }
+  }, [ratings, user]);
+
+  // Calculate display stats from ratings (immediate feedback)
+  const displayRatingsCount = ratings.length;
+  const displayAverageRating = ratings.length > 0
+    ? Math.round((ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length) * 10) / 10
+    : 0;
+
+  // Background refresh gem stats after review submission
+  const refreshGemStats = useCallback(async () => {
+    if (!gem) return;
+    try {
+      const response = await fetch(`/api/gems/${gem.id}`);
+      const result = await response.json();
+      if (result.data) {
+        // Update only the stats, preserve other gem data
+        setGem((prev) => prev ? {
+          ...prev,
+          average_rating: result.data.average_rating,
+          ratings_count: result.data.ratings_count,
+          views_count: result.data.views_count,
+        } : null);
+      }
+    } catch (error) {
+      console.error('Error refreshing gem stats:', error);
+    }
+  }, [gem]);
 
   // Fetch menu items for eat_drink gems
   useEffect(() => {
@@ -175,11 +215,12 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
   };
 
   const handleSubmitRating = async () => {
-    if (!user || newRating === 0) return;
+    if (!user || newRating === 0 || !gem) return;
 
     setSubmitting(true);
     setSubmitError(null);
 
+    // Create optimistic review with user data
     const optimisticReview: Rating = {
       id: `temp-${Date.now()}`,
       gem_id: gem.id,
@@ -199,11 +240,13 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
       },
     };
 
-    setRatings((prev) => [optimisticReview, ...prev]);
-    setUserHasReviewed(true);
-
+    // Store values before clearing form
     const submittedRating = newRating;
     const submittedComment = newComment;
+
+    // Optimistic updates - immediate feedback
+    setRatings((prev) => [optimisticReview, ...prev]);
+    setUserReview(optimisticReview);
     setNewRating(0);
     setNewComment('');
 
@@ -223,12 +266,20 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
         throw new Error(result.error || 'Failed to submit review');
       }
 
+      // Replace optimistic review with real data from server
+      const serverReview = result.data;
       setRatings((prev) =>
-        prev.map((r) => (r.id === optimisticReview.id ? result.data : r))
+        prev.map((r) => (r.id === optimisticReview.id ? serverReview : r))
       );
+      setUserReview(serverReview);
+
+      // Background refresh gem stats from database (non-blocking)
+      refreshGemStats();
+
     } catch (error) {
+      // Rollback on error
       setRatings((prev) => prev.filter((r) => r.id !== optimisticReview.id));
-      setUserHasReviewed(false);
+      setUserReview(null);
       setNewRating(submittedRating);
       setNewComment(submittedComment);
       setSubmitError(error instanceof Error ? error.message : 'Failed to submit review');
@@ -346,7 +397,7 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
                 </div>
               </div>
 
-              {/* Rating & Stats */}
+              {/* Rating & Stats - Use computed values for immediate feedback */}
               <div className="flex items-center gap-6 mt-4">
                 <div className="flex items-center gap-1.5">
                   <div className="flex items-center">
@@ -354,16 +405,16 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
                       <Star
                         key={i}
                         className={`h-5 w-5 ${
-                          i < Math.floor(gem.average_rating)
+                          i < Math.floor(displayAverageRating)
                             ? 'fill-[#00AA6C] text-[#00AA6C]'
                             : 'fill-gray-200 text-gray-200'
                         }`}
                       />
                     ))}
                   </div>
-                  <span className="font-semibold text-gray-900">{gem.average_rating}</span>
+                  <span className="font-semibold text-gray-900">{displayAverageRating.toFixed(1)}</span>
                 </div>
-                <span className="text-gray-500">({gem.ratings_count} reviews)</span>
+                <span className="text-gray-500">({displayRatingsCount} {displayRatingsCount === 1 ? 'review' : 'reviews'})</span>
                 <div className="flex items-center gap-1.5 text-gray-500">
                   <Eye className="h-4 w-4" />
                   <span>{gem.views_count.toLocaleString()} views</span>
@@ -565,18 +616,53 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
               {/* Reviews Tab */}
               {activeTab === 'reviews' && (
                 <div>
-                  {/* Add review form */}
+                  {/* Add review form or show user's existing review */}
                   {user ? (
-                    userHasReviewed ? (
-                      <div className="mb-8 p-6 bg-green-50 rounded-xl text-center">
-                        <p className="text-green-700 font-medium">
-                          Thanks for your review!
-                        </p>
-                        <p className="text-green-600 text-sm mt-1">
-                          You have already reviewed this place.
-                        </p>
+                    userReview ? (
+                      // Show user's own review - highlighted
+                      <div className="mb-8 p-6 bg-[#00AA6C]/5 border border-[#00AA6C]/20 rounded-xl">
+                        <div className="flex items-center gap-2 mb-4">
+                          <CheckCircle className="h-5 w-5 text-[#00AA6C]" />
+                          <span className="font-medium text-[#00AA6C]">Your Review</span>
+                        </div>
+                        <div className="flex items-start gap-4">
+                          <Avatar className="h-10 w-10 flex-shrink-0">
+                            <AvatarImage src={userReview.user?.avatar_url ?? undefined} alt={userReview.user?.full_name ?? ''} />
+                            <AvatarFallback className="bg-[#00AA6C] text-white text-sm">
+                              {userReview.user?.full_name?.charAt(0).toUpperCase() || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-1">
+                              <span className="font-medium text-gray-900">
+                                {userReview.user?.full_name}
+                              </span>
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < userReview.score
+                                        ? 'fill-[#00AA6C] text-[#00AA6C]'
+                                        : 'fill-gray-200 text-gray-200'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-2">
+                              {formatDate(userReview.created_at)}
+                            </p>
+                            {userReview.comment && (
+                              <p className="text-gray-700 leading-relaxed">
+                                {userReview.comment}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ) : (
+                      // Show review form
                       <div className="mb-8 p-6 bg-gray-50 rounded-xl">
                         <h3 className="font-medium text-gray-900 mb-3">Leave a review</h3>
                         {submitError && (
@@ -629,61 +715,79 @@ export default function GemDetailPage({ params }: { params: Promise<{ id: string
                     </div>
                   )}
 
-                  {/* All Reviews */}
-                  {ratingsLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-[#00AA6C]" />
-                    </div>
-                  ) : ratings.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
-                      <p>No reviews yet. Be the first to review!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-0">
-                      {ratings.map((rating, index) => (
-                      <div
-                        key={rating.id}
-                        className={`py-5 ${index !== ratings.length - 1 ? 'border-b border-gray-100' : ''}`}
-                      >
-                        <div className="flex items-start gap-4">
-                          <Avatar className="h-10 w-10 flex-shrink-0">
-                            <AvatarImage src={rating.user?.avatar_url ?? undefined} alt={rating.user?.full_name ?? ''} />
-                            <AvatarFallback className="bg-gray-900 text-white text-sm">
-                              {rating.user?.full_name?.charAt(0).toUpperCase() || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-1">
-                              <span className="font-medium text-gray-900">
-                                {rating.user?.full_name}
-                              </span>
-                              <div className="flex items-center">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-4 w-4 ${
-                                      i < rating.score
-                                        ? 'fill-[#00AA6C] text-[#00AA6C]'
-                                        : 'fill-gray-200 text-gray-200'
-                                    }`}
-                                  />
-                                ))}
+                  {/* Other Reviews (exclude user's review since shown above) */}
+                  {(() => {
+                    const otherReviews = user
+                      ? ratings.filter((r) => r.user_id !== user.id)
+                      : ratings;
+
+                    if (ratingsLoading) {
+                      return (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-8 w-8 animate-spin text-[#00AA6C]" />
+                        </div>
+                      );
+                    }
+
+                    if (otherReviews.length === 0 && !userReview) {
+                      return (
+                        <div className="text-center py-12 text-gray-500">
+                          <p>No reviews yet. Be the first to review!</p>
+                        </div>
+                      );
+                    }
+
+                    if (otherReviews.length === 0) {
+                      return null; // User's review is shown above, no other reviews
+                    }
+
+                    return (
+                      <div className="space-y-0">
+                        {otherReviews.map((rating, index) => (
+                          <div
+                            key={rating.id}
+                            className={`py-5 ${index !== otherReviews.length - 1 ? 'border-b border-gray-100' : ''}`}
+                          >
+                            <div className="flex items-start gap-4">
+                              <Avatar className="h-10 w-10 flex-shrink-0">
+                                <AvatarImage src={rating.user?.avatar_url ?? undefined} alt={rating.user?.full_name ?? ''} />
+                                <AvatarFallback className="bg-gray-900 text-white text-sm">
+                                  {rating.user?.full_name?.charAt(0).toUpperCase() || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3 mb-1">
+                                  <span className="font-medium text-gray-900">
+                                    {rating.user?.full_name}
+                                  </span>
+                                  <div className="flex items-center">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-4 w-4 ${
+                                          i < rating.score
+                                            ? 'fill-[#00AA6C] text-[#00AA6C]'
+                                            : 'fill-gray-200 text-gray-200'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className="text-sm text-gray-500 mb-2">
+                                  {formatDate(rating.created_at)}
+                                </p>
+                                {rating.comment && (
+                                  <p className="text-gray-700 leading-relaxed">
+                                    {rating.comment}
+                                  </p>
+                                )}
                               </div>
                             </div>
-                            <p className="text-sm text-gray-500 mb-2">
-                              {formatDate(rating.created_at)}
-                            </p>
-                            {rating.comment && (
-                              <p className="text-gray-700 leading-relaxed">
-                                {rating.comment}
-                              </p>
-                            )}
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
             </div>
